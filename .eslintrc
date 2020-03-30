@@ -1,0 +1,48 @@
+{
+    "root": true,
+    "parser": "vue-eslint-parser",
+    "parserOptions": {
+        "parser": "babel-eslint",
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "jsx": true,
+            "modules": true,
+            "experimentalObjectRestSpread": true
+        }
+    },
+    "env": {
+        "browser": true,
+        "commonjs": true,
+        "es6": true
+    },
+    "extends": ["plugin:vue/base", "eslint:recommended"],
+    "plugins": ["vue"],
+    "rules": {
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "quotes": ["error", "single"],
+        "semi": ["error", "always"],
+        "vue/jsx-uses-vars": 2,
+        "no-console": ["error"],
+        "no-multiple-empty-lines": ["error", {"max": 2}],
+        "no-debugger": 2, //禁止使用debugger
+        "no-sparse-arrays": 2,//禁止稀疏数组， [1,,2]
+        "no-unreachable": 2,//不能有无法执行的代码
+        "no-var": 2,//禁用var，用let和const代替
+        "default-case": 2,//switch语句最后必须有default
+        "eqeqeq": 2, //必须使用全等
+        "spaced-comment": 2, //注释风格要不要有空格什么的
+        "no-unused-vars": [0, {"vars": "all", "args": "after-used"}], //不能有声明后未被使用的变量或参数
+        "curly": [2, "all"], //必须使用 if(){} 中的{}
+        "array-bracket-spacing": [2, "never"], //是否允许非空数组里面有多余的空格
+        "no-extra-parens": 2,//禁止非必要的括号
+        "no-extra-semi": 2,//禁止多余的冒号
+        "key-spacing": [2, { "beforeColon": false, "afterColon": true }], //对象字面量中冒号的前后空格
+        "no-irregular-whitespace": 0,//不能有不规则的空格
+        "no-spaced-func": 2, //函数调用时 函数名与()之间不能有空格
+        "space-infix-ops": 2, // 中缀操作符周围要不要有空格
+        "require-atomic-updates": 0,
+        "no-prototype-builtins": 0, // 禁止直接使用 Object.prototypes 的内置属性
+        "no-useless-escape":0  // 不允许在字符串和正则表达式中使用无意义的换行符
+    }
+}
