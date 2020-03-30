@@ -31,7 +31,7 @@ module.exports = {
         loaders: loaders,
     },
 
-    plugins: plugins,
+    // plugins: plugins,
 
     devtool: false,
 }

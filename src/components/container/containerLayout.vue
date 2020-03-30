@@ -102,7 +102,7 @@ export default {
 
     mounted() {
         this.setComponentRefs();
-        for (const component of this.components) {
+        for (const component of this.componentList ?? []) {
             this.$watch(
                 () => {
                     return component.hidden;
@@ -116,10 +116,10 @@ export default {
 
     methods: {
         setComponentRefs() {
-            for (const it of this.$refs.component) {
+            for (const it of this.$refs.component ?? []) {
                 this.refs[it.vpPageComponentName] = it;
             }
-            for (const it of this.$refs.page) {
+            for (const it of this.$refs.page ?? []) {
                 this.refs[it.vpPageComponentName] = it.$children[0];
             }
         },
