@@ -1,8 +1,8 @@
 {
     "name": "vpaco",
-    "version": "0.0.15",
+    "version": "0.0.17",
     "description": "",
-    "main": "./dist/vpaco.min.js",
+    "main": "./dist/vpaco.js",
     "scripts": {
         "build": "webpack --config build/webpack.config.js",
         "lint": "eslint --fix --ext .js,.vue src",
@@ -12,6 +12,8 @@
     "license": "MIT",
     "devDependencies": {
         "@babel/core": "^7.9.0",
+        "@babel/plugin-proposal-nullish-coalescing-operator": "^7.8.3",
+        "@babel/plugin-proposal-optional-chaining": "^7.9.0",
         "@babel/plugin-proposal-object-rest-spread": "^7.9.0",
         "@babel/plugin-syntax-async-generators": "^7.8.4",
         "@babel/plugin-syntax-jsx": "^7.8.3",
@@ -63,9 +65,5 @@
         "vue-router": "^2.8.1",
         "vue-template-compiler": "^2.6.10",
         "webpack-stream": "4.0.3"
-    },
-    "dependencies": {
-        "@babel/plugin-proposal-nullish-coalescing-operator": "^7.8.3",
-        "@babel/plugin-proposal-optional-chaining": "^7.9.0"
     }
 }
