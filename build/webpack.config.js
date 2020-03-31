@@ -12,7 +12,7 @@ module.exports = {
     output: {
         // eslint-disable-next-line no-undef
         path: __dirname + '/../dist/',
-        filename: 'vpaco.min.js',
+        filename: 'vpaco.js',
         library: 'vpaco',
         libraryTarget: 'umd',
         umdNamedDefine: true
@@ -30,8 +30,6 @@ module.exports = {
     module: {
         loaders: loaders,
     },
-
-    // plugins: plugins,
 
     devtool: false,
 }
