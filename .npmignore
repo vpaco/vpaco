@@ -1,6 +1,10 @@
+.idea/
 node_modules/
 src/
 webpack*
 .babelrc
 .eslintrc
+.eslintignore
+.prettierrc
 .editorconfig
+README.MD
