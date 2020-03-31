@@ -12,13 +12,16 @@ npm install vpaco --save
 
 注册
 ```javascript
-import {register} from 'vpaco'
+import Vue from 'vue'
+import vpaco from 'vpaco'
 import component1 from "./component"
 import component2 from "./component2"
 import page1 from "./page"
 import page2 from "./page2"
 
-register({
+Vue.use(vpaco)
+
+vpaco.register({
     components: {
         component1,
         component2
