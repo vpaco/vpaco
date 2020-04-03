@@ -75,6 +75,13 @@ export default {
     }
 }
 ```
+#### register配置项
+|    Name    | type |   Description   |
+| :--------: | :--------: | :--------: |
+| components    | Object  | 组件(页面layout中使用的组件) |
+| pages    | Object  | 页面 |
+| extensions    | Object  | 页面方法扩展 |
+
 #### 页面内置属性
 |    Name    | type |   Description   |   Parameters   |
 | :--------: | :--------: | :--------: | :--------: |
