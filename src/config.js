@@ -19,6 +19,9 @@ export function getVue(vue) {
 export async function register(config) {
     globalConfig = config;
 
+    config.components = config.components || {}
+    config.remoteComponents = config.remoteComponents || {}
+
     for (let key in config.components) {
         const component = config.components[key];
 

@@ -1,7 +1,7 @@
-import { getConfig, getVue } from '../config';
+import {getConfig, getVue} from '../config';
 import proxy from './proxy';
 import _endsWith from 'lodash/endsWith';
-import { RemoteComponent } from './RemoteComponent';
+import {RemoteComponent} from './RemoteComponent';
 
 let loadedModules = {};
 
@@ -147,6 +147,12 @@ async function loadComponent_(componentList) {
     }
 }
 
+export function isRemoteComponent(name) {
+    const appConfig = getConfig();
+
+    return !!appConfig.remoteComponents[name];
+}
+
 function getRemoteComponentUrl(name) {
     const appConfig = getConfig();
 
@@ -156,6 +162,12 @@ function getRemoteComponentUrl(name) {
 export async function getProxyComponent(name, isRemote) {
     const Vue = getVue();
     const appConfig = getConfig();
+
+    if(!appConfig.components[name] && !appConfig.remoteComponents[name]){
+        // eslint-disable-next-line no-console
+        console.error(`组件"${name}"不存在！`);
+    }
+
     if (!isRemote) {
         let proxyName = name + '_proxy';
         if (!Vue.component(proxyName)) {
@@ -211,9 +223,9 @@ export const log = {
                     // eslint-disable-next-line no-console
                     console &&
                     // eslint-disable-next-line no-console
-                        console.debug &&
+                    console.debug &&
                     // eslint-disable-next-line no-console
-                        console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] [pageName: ${this.page}] ${formatDate(new Date())}  ${msg}`);
+                    console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] [pageName: ${this.page}] ${formatDate(new Date())}  ${msg}`);
                 } else {
                     // eslint-disable-next-line no-console
                     console && console.debug && console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] ${formatDate(new Date())}  ${msg}`);
