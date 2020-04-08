@@ -5,82 +5,79 @@
         :options="options"
         :events="events"
         :slots="slots"
-        :vp-component-name="innerComponentName"
-        :remoteComponent="!!remoteComponent"
+        :vp-component-name="name"
+        :remoteComponent="!!isRemote"
         ref="component"
     ></component>
 </template>
 <script>
-import { getProxyComponent } from '../utils';
+    import {getProxyComponent, isRemoteComponent} from '../utils';
 
-export default {
-    props: {
-        options: {
-            type: Object
-        },
-        events: {
-            type: Object
-        },
-        slots: {
-            type: Object
-        },
-        component: {
-            type: String
-        },
-        remoteComponent: {
-            type: String
-        },
-        value: {
-            default: undefined
-        }
-    },
-
-    data: function () {
-        return {
-            innerComponent: '',
-            vpIsComponent: true,
-            innerComponentName: ''
-        };
-    },
-
-    watch: {
-        component() {
-            this.innerComponent = this.component;
-        },
-
-        value() {
-            this.options.value = this.value;
-        },
-
-        'options.value'() {
-            if (this.options.value !== this.value) {
-                this.$emit('input', this.options.value);
+    export default {
+        props: {
+            options: {
+                type: Object,
+                default() {
+                    return {};
+                }
+            },
+            events: {
+                type: Object
+            },
+            slots: {
+                type: Object
+            },
+            name: {
+                type: String
+            },
+            value: {
+                default: undefined
             }
-        }
-    },
+        },
 
-    created() {
-        if (this.value !== undefined) {
-            this.$set(this.options, 'value', this.value);
-        }
+        data: function () {
+            return {
+                innerComponent: '',
+                vpIsComponent: true,
+                isRemote: false
+            };
+        },
 
-        this.innerComponent = this.component;
-        let url = this.remoteComponent;
+        watch: {
+            component() {
+                this.isRemote = isRemoteComponent(this.name)
+                getProxyComponent(this.name, this.isRemote).then(name => {
+                    this.innerComponent = name;
+                });
+            },
 
-        this.innerComponentName = this.innerComponent || url;
+            value() {
+                this.options.value = this.value;
+            },
 
-        if (url) {
-            getProxyComponent(url).then(name => {
+            'options.value'() {
+                if (this.options.value !== this.value) {
+                    this.$emit('input', this.options.value);
+                }
+            }
+        },
+
+        created() {
+            if (this.value !== undefined) {
+                this.$set(this.options, 'value', this.value);
+            }
+
+            this.isRemote = isRemoteComponent(this.name)
+            getProxyComponent(this.name, this.isRemote).then(name => {
                 this.innerComponent = name;
                 this.$emit('on-component-ready');
             });
-        }
-    },
+        },
 
-    methods: {
-        getInstance() {
-            return this.$refs.component;
+        methods: {
+            getInstance() {
+                return this.$refs.component;
+            }
         }
-    }
-};
+    };
 </script>
