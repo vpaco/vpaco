@@ -13,7 +13,7 @@ export default {
         events: {
             type: Object
         },
-        page: {
+        name: {
             type: String
         },
         value: {
@@ -31,7 +31,7 @@ export default {
         return {
             vpIsPageWrapper: true,
             innerOptions: this.options || {},
-            innerPage: this.page
+            innerPage: this.name
         };
     },
 
@@ -45,8 +45,8 @@ export default {
     },
 
     watch: {
-        page: function () {
-            this.innerPage = this.page;
+        name: function () {
+            this.innerPage = this.name;
         },
 
         options() {
