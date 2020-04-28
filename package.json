@@ -1,6 +1,6 @@
 {
     "name": "vpaco",
-    "version": "0.0.19",
+    "version": "0.0.20",
     "description": "develop pages through configuration mode",
     "main": "./dist/vpaco.js",
     "scripts": {
