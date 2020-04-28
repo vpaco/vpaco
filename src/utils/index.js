@@ -138,7 +138,7 @@ async function loadComponent_(componentList) {
     for (let component of componentList) {
         if (component.componentList) {
             await loadComponent_(component.componentList);
-        } else {
+        } else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
             await getProxyComponent(component.componentName, !!component.remoteComponent).then(proxyName => {
                 component.component = proxyName;
@@ -163,7 +163,7 @@ export async function getProxyComponent(name, isRemote) {
     const Vue = getVue();
     const appConfig = getConfig();
 
-    if(!appConfig.components[name] && !appConfig.remoteComponents[name]){
+    if (!appConfig.components[name] && !appConfig.remoteComponents[name]) {
         // eslint-disable-next-line no-console
         console.error(`组件"${name}"不存在！`);
     }
