@@ -44,7 +44,7 @@
         },
 
         watch: {
-            component() {
+            name() {
                 this.isRemote = isRemoteComponent(this.name)
                 getProxyComponent(this.name, this.isRemote).then(name => {
                     this.innerComponent = name;
