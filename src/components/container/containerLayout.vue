@@ -73,12 +73,11 @@
                         ref="component"
                         :class="getComponentContentStyle(comp)"
                     />
-                    <vp-page
+                    <VpPage
                         v-if="comp.page"
-                        :page="comp.page"
+                        :name="comp.page"
                         :options="comp.options || {}"
                         :events="comp.events || {}"
-                        :slots="comp.slots || {}"
                         :class="getComponentContentStyle(comp)"
                         :vp-page-component-name="comp.name"
                         ref="page"
