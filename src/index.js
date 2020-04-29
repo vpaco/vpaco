@@ -6,6 +6,8 @@ export const VpPage = Page;
 export const VpComponent = Component;
 export const register = _register;
 export const install = function (Vue, opts = {}) {
+    Vue.component('VpPage', VpPage);
+    Vue.component('VpComponent', VpComponent);
     setVue(Vue);
 };
 
