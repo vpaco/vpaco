@@ -2,7 +2,7 @@
     <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="'vp-page-' + page"/>
 </template>
 <script>
-    import {mergeRows, log, deepCopy, loadComponent, toString} from '../utils';
+    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig} from '../utils';
     import Container from './container/container';
     import {getConfig} from '../config';
     import isArray from 'isarray';
@@ -95,15 +95,17 @@
                     return;
                 }
 
-                if (!appConfig.pages[this.page]) {
+                const rawPageConfig = getPageConfig(this.page, this);
+
+                if (!rawPageConfig) {
                     // eslint-disable-next-line no-console
                     console.error(`没有${this.page}页面！！！`);
                     return;
                 }
 
-                let rawPageConfig = appConfig.pages[this.page];
-
                 let layout = rawPageConfig.layout;
+
+                this.rawPageConfig = rawPageConfig;
 
                 layout = deepCopy(layout);
                 if (isArray(layout)) {
@@ -115,7 +117,7 @@
 
                 this._initAncestorRefs();
 
-                let configCallback = appConfig.pages[this.page].config;
+                let configCallback = rawPageConfig.config;
                 let config = configCallback ? configCallback(this) : {};
 
                 let {options, events, methods, init, mounted, optionsChange, destroy} = config;
@@ -133,7 +135,7 @@
                         return;
                     }
                     // 加载组件
-                    loadComponent(layout).then(() => {
+                    loadComponent(layout, this.page).then(() => {
                         this.$emit('on-component-ready');
 
                         const showPage = () => {

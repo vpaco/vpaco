@@ -130,17 +130,18 @@ export function mergeRows(componentList, options, events, slots) {
     }
 }
 
-export function loadComponent(pageConfig) {
-    return loadComponent_(pageConfig.componentList);
+export function loadComponent(pageConfig, pageName) {
+    return loadComponent_(pageConfig.componentList, pageName);
 }
 
-async function loadComponent_(componentList) {
+async function loadComponent_(componentList, pageName) {
+    const appConfig = getConfig();
     for (let component of componentList) {
         if (component.componentList) {
-            await loadComponent_(component.componentList);
+            await loadComponent_(component.componentList, pageName);
         } else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
-            await getProxyComponent(component.componentName, !!component.remoteComponent).then(proxyName => {
+            await getProxyComponent(component.componentName, !!component.remoteComponent, pageName).then(proxyName => {
                 component.component = proxyName;
             });
         }
@@ -159,19 +160,35 @@ function getRemoteComponentUrl(name) {
     return appConfig.remoteComponents[name];
 }
 
-export async function getProxyComponent(name, isRemote) {
+export async function getProxyComponent(name, isRemote, pageName) {
     const Vue = getVue();
     const appConfig = getConfig();
+    let pageConfig;
 
-    if (!appConfig.components[name] && !appConfig.remoteComponents[name]) {
+    if(pageName && appConfig.pages[pageName]){
+        pageConfig = appConfig.pages[pageName];
+    }
+
+    if (!appConfig.components[name] &&
+        !appConfig.remoteComponents[name] &&
+        !(pageConfig && pageConfig.components && pageConfig.components[name]) &&
+        !(pageConfig && pageConfig.remoteComponents && pageConfig.remoteComponents[name])
+    ) {
         // eslint-disable-next-line no-console
         console.error(`组件"${name}"不存在！`);
     }
 
     if (!isRemote) {
-        let proxyName = name + '_proxy';
+        const component = appConfig.components[name] ||  pageConfig && pageConfig.components[name];
+        let proxyName;
+
+        if(pageConfig && pageConfig.components[name]){
+            proxyName = pageName + name + '_proxy';
+        }else if(appConfig.components[name]) {
+            proxyName = name + '_proxy';
+        }
         if (!Vue.component(proxyName)) {
-            Vue.component(proxyName, proxy(appConfig.components[name].__esModule ? appConfig.components[name].default : appConfig.components[name]));
+            Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
         }
 
         return proxyName;
@@ -179,7 +196,7 @@ export async function getProxyComponent(name, isRemote) {
 
     let url = name;
     if (!_endsWith(url, '.js')) {
-        url = getRemoteComponentUrl(url);
+        url = appConfig.remoteComponents[name] || pageConfig && pageConfig.remoteComponents[name];
     }
 
     const component = await loadRemoteModule(url);
@@ -270,4 +287,40 @@ export function loadRemoteModule(url) {
     });
 
     return loadedModules[url];
+}
+
+function getParentPageList(vm) {
+    let res = [];
+    let parent = vm;
+
+    do {
+        if (parent.vpIsPage) {
+            res.push(parent);
+            parent = parent.$parent;
+        } else {
+            parent = parent.$parent;
+        }
+    } while (parent && parent.$parent);
+
+    return res;
+}
+
+export function getPageConfig(pageName, vm) {
+    let appConfig = getConfig();
+    let pageConfig;
+
+    const parentPageList = getParentPageList(vm);
+
+    for(const page of parentPageList) {
+        if(page.rawPageConfig && page.rawPageConfig.pages && page.rawPageConfig.pages[pageName]){
+            pageConfig = page.rawPageConfig.pages[pageName];
+            break;
+        }
+    }
+
+    if(appConfig.pages[pageName]){
+        pageConfig = appConfig.pages[pageName];
+    }
+
+    return pageConfig;
 }
