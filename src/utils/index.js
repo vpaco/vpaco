@@ -182,7 +182,7 @@ export async function getProxyComponent(name, isRemote, pageName) {
         const component = appConfig.components[name] ||  pageConfig && pageConfig.components[name];
         let proxyName;
 
-        if(pageConfig && pageConfig.components[name]){
+        if(pageConfig && pageConfig.components && pageConfig.components[name]){
             proxyName = pageName + name + '_proxy';
         }else if(appConfig.components[name]) {
             proxyName = name + '_proxy';

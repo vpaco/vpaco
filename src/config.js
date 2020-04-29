@@ -16,11 +16,22 @@ export function getVue(vue) {
     return Vue;
 }
 
+export function addPage(key, value) {
+    if(globalConfig.pages[key]){
+        // eslint-disable-next-line no-console
+        console.error(`${key} 页面已存在!, 请更换页面名称`);
+        return;
+    }
+
+    globalConfig.pages[key] = value;
+}
+
 export async function register(config) {
     globalConfig = config;
 
-    config.components = config.components || {}
-    config.remoteComponents = config.remoteComponents || {}
+    config.components = config.components || {};
+    config.remoteComponents = config.remoteComponents || {};
+    config.pages = config.pages || {};
 
     for (let key in config.components) {
         const component = config.components[key];
