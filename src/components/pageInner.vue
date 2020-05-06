@@ -135,7 +135,7 @@
                         return;
                     }
                     // 加载组件
-                    loadComponent(layout, this.page).then(() => {
+                    loadComponent(layout, rawPageConfig, this.page).then(() => {
                         this.$emit('on-component-ready');
 
                         const showPage = () => {
