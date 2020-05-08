@@ -1,5 +1,11 @@
 <template>
-    <page-inner :page.sync="innerPage" :events="events" :options.sync="innerOptions" ref="page" @on-component-ready="remoteLoaded" />
+    <page-inner
+        :page.sync="innerPage"
+        :events="events"
+        :options.sync="innerOptions"
+        ref="page"
+        :config="config"
+        @on-component-ready="remoteLoaded" />
 </template>
 <script>
 import pageInner from './pageInner';
@@ -15,6 +21,9 @@ export default {
         },
         name: {
             type: String
+        },
+        config: {
+            type: Object
         },
         value: {
             default: undefined

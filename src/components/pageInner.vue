@@ -18,6 +18,9 @@
             },
             events: {
                 type: Object
+            },
+            config: {
+                type: Object
             }
         },
 
@@ -35,6 +38,10 @@
 
         watch: {
             page: function () {
+                this.reloadPage();
+            },
+
+            config: function(){
                 this.reloadPage();
             },
 
@@ -90,14 +97,20 @@
                 }
                 const appConfig = getConfig();
                 this.lastPage = null;
-                if (!this.page) {
+                if (!this.page && !this.config) {
                     this.pageConfig = null;
                     return;
                 }
 
-                const rawPageConfig = getPageConfig(this.page, this);
+                let rawPageConfig;
 
-                if (!rawPageConfig) {
+                if(this.config){
+                    rawPageConfig = this.config;
+                }else {
+                    rawPageConfig = getPageConfig(this.page, this);
+                }
+
+                if (this.page && !rawPageConfig) {
                     // eslint-disable-next-line no-console
                     console.error(`没有${this.page}页面！！！`);
                     return;
