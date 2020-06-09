@@ -113,3 +113,8 @@ export default {
 | mounted    | 页面渲染完成钩子  |
 | optionsChange    | 页面入参改变钩子  |
 | destroy    | 页面销毁钩子  |
+
+## License
+[MIT](http://opensource.org/licenses/MIT)
+
+Copyright (c) 2019-present, LIUJUN
