@@ -1,6 +1,11 @@
 import { loadRemoteModule } from './utils';
 
-let globalConfig = null;
+let globalConfig = {
+    components: {},
+    remoteComponents: {},
+    pages: {},
+    extendsions: {}
+};
 
 let Vue = null;
 
