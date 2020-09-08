@@ -114,6 +114,15 @@ export function mergeRows(componentList, options, events, slots) {
             }
         } else {
             if (component.name && options[component.name]) {
+                let val = options[component.name];
+                Object.defineProperty(options, component.name, {
+                    get(){
+                        return val;
+                    },
+                    set(newValue){
+                        component.options = newValue;
+                    }
+                });
                 component.options = options[component.name];
             }
 
