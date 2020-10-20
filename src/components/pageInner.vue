@@ -1,5 +1,5 @@
 <template>
-    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="'vp-page-' + page"/>
+    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass"/>
 </template>
 <script>
     import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig} from '../utils';
@@ -76,6 +76,14 @@
         },
 
         methods: {
+            getPageClass(){
+                const pageName = (this.page || (this.config && this.config.name))
+                if(pageName){
+                    return 'vp-page-' + pageName;
+                }else{
+                    return '';
+                }
+            },
             merge(layout, {slots = {}, events = {}, options = {}, methods = {}}) {
                 if (!layout) {
                     return null;
