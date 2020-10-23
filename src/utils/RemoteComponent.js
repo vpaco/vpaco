@@ -18,7 +18,10 @@ export class RemoteComponent {
 
     runScript(text) {
         let module = undefined,
-            exports = undefined;
+            exports = undefined,
+            globalThis = this,
+            self = this;
+
         eval(text);
     }
 }

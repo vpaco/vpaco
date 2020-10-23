@@ -309,21 +309,45 @@ function getParentPageList(vm) {
     return res;
 }
 
-export function getPageConfig(pageName, vm) {
+export async function getPageConfig(pageName, vm, isRemote = false) {
     let appConfig = getConfig();
     let pageConfig;
 
     const parentPageList = getParentPageList(vm);
 
+    if(isRemote === false){
+        for(const page of parentPageList) {
+            if(!pageConfig && page.rawPageConfig && page.rawPageConfig.pages && page.rawPageConfig.pages[pageName]){
+                pageConfig = page.rawPageConfig.pages[pageName];
+                break;
+            }
+        }
+
+        if(!pageConfig && appConfig.pages[pageName]){
+            pageConfig = appConfig.pages[pageName];
+        }
+    }
+
     for(const page of parentPageList) {
-        if(page.rawPageConfig && page.rawPageConfig.pages && page.rawPageConfig.pages[pageName]){
-            pageConfig = page.rawPageConfig.pages[pageName];
+        if(!pageConfig && page.rawPageConfig && page.rawPageConfig.remotePages && page.rawPageConfig.remotePages[pageName]){
+            isRemote = true;
+            pageConfig = page.rawPageConfig.remotePages[pageName];
             break;
         }
     }
 
-    if(!pageConfig && appConfig.pages[pageName]){
-        pageConfig = appConfig.pages[pageName];
+    if(!pageConfig && appConfig.remotePages[pageName]){
+        isRemote = true;
+        pageConfig = appConfig.remotePages[pageName];
+    }
+
+    if (isRemote) {
+        pageConfig = await loadRemoteModule(pageConfig);
+    }
+
+    if(!pageConfig){
+        // eslint-disable-next-line no-console
+        console.error(`页面${pageName}不存在！`);
     }
 
     return pageConfig;

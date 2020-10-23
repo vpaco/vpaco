@@ -3,6 +3,7 @@
         :page.sync="innerPage"
         :events="events"
         :options.sync="innerOptions"
+        :isRemote="isRemote"
         ref="page"
         :config="config"
         @on-component-ready="remoteLoaded" />
@@ -27,6 +28,10 @@ export default {
         },
         value: {
             default: undefined
+        },
+        isRemote: {
+            type: Boolean,
+            default: false
         },
         vpIsPageComponent: {
             type: Boolean

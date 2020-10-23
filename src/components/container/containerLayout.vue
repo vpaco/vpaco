@@ -74,10 +74,11 @@
                         :class="getComponentContentStyle(comp)"
                     />
                     <VpPage
-                        v-if="comp.page"
-                        :name="comp.page"
+                        v-if="comp.page || comp.remotePage"
+                        :name="comp.page || comp.remotePage"
                         :options="comp.options || {}"
                         :events="comp.events || {}"
+                        :isRemote="!!comp.remotePage"
                         :class="getComponentContentStyle(comp)"
                         :vp-page-component-name="comp.name"
                         ref="page"

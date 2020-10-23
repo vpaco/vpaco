@@ -21,7 +21,10 @@
             },
             config: {
                 type: Object
-            }
+            },
+            isRemote: {
+                type: Boolean
+            },
         },
 
         data: function () {
@@ -98,7 +101,7 @@
 
                 return layout;
             },
-            reloadPage() {
+            async reloadPage() {
                 if (this.lastPage) {
                     this.destroy && this.destroy();
                     log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
@@ -115,12 +118,10 @@
                 if(this.config){
                     rawPageConfig = this.config;
                 }else {
-                    rawPageConfig = getPageConfig(this.page, this);
+                    rawPageConfig = await getPageConfig(this.page, this, this.isRemote);
                 }
 
                 if (this.page && !rawPageConfig) {
-                    // eslint-disable-next-line no-console
-                    console.error(`没有${this.page}页面！！！`);
                     return;
                 }
 
