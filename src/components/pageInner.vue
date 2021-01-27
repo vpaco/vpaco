@@ -51,9 +51,7 @@
             options: {
                 deep: true,
                 handler(val, oldVal) {
-                    this.$nextTick(() => {
-                        this.optionsChange && this.optionsChange(val, oldVal);
-                    });
+                    this.optionsChange && this.optionsChange(val, oldVal);
                 }
             }
         },
@@ -96,7 +94,7 @@
                 }
 
                 if (layout.componentList) {
-                    mergeRows(layout.componentList, options, events, slots);
+                    mergeRows(layout.componentList, options, events, slots, this);
                 }
 
                 return layout;

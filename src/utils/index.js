@@ -104,7 +104,8 @@ function checkLayoutNameRepeat(names, name) {
     return hasOne;
 }
 
-export function mergeRows(componentList, options, events, slots) {
+export function mergeRows(componentList, options, events, slots, vm) {
+    const Vue = getVue();
     for (const component of componentList) {
         if (component.componentList) {
             mergeRows(component.componentList, options, events, slots);
@@ -114,16 +115,23 @@ export function mergeRows(componentList, options, events, slots) {
             }
         } else {
             if (component.name && options[component.name]) {
-                let val = options[component.name];
-                Object.defineProperty(options, component.name, {
-                    get(){
-                        return val;
-                    },
-                    set(newValue){
-                        component.options = newValue;
-                    }
-                });
-                component.options = options[component.name];
+                if(typeOf(options[component.name]) === 'function'){
+                    component.options = options[component.name]()
+                    vm.$watch(options[component.name], (val)=>{
+                        component.options = val
+                    })
+                }else{
+                    let val = options[component.name];
+                    Object.defineProperty(options, component.name, {
+                        get(){
+                            return val;
+                        },
+                        set(newValue){
+                            component.options = newValue;
+                        }
+                    });
+                    component.options = options[component.name];
+                }
             }
 
             if (component.name && slots[component.name]) {
