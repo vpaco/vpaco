@@ -2,47 +2,9 @@
     <div>
         <template v-for="(comp, index) in componentList">
             <template v-if="!comp.hidden">
-                <template v-if="comp.type == 'body'">
-                    <container-layout
-                        class="vp-component-list"
-                        :key="index"
-                        :class="getComponentWrapClass(comp)"
-                        :data-comp-id="comp.id"
-                        :style="comp.style"
-                        v-if="!comp.hidden"
-                        :refs="refs"
-                        :componentList="comp.componentList"
-                    />
-                </template>
-                <template v-else-if="comp.type == 'component'">
-                    <container-layout
-                        class="vp-component-list"
-                        :key="index"
-                        :class="getComponentWrapClass(comp)"
-                        :data-comp-id="comp.id"
-                        :style="comp.style"
-                        v-if="!comp.hidden"
-                        :refs="refs"
-                        :componentList="comp.componentList"
-                    />
-                </template>
-                <template v-else-if="comp.type == 'row'">
-                    <vp-row :class="getComponentWrapClass(comp)" :data-comp-id="comp.id" :key="index" :style="comp.style" :gutter="comp.gutter">
-                        <template v-for="col in comp.componentList">
-                            <vp-col :span="col.span" :class="col.class" :style="col.style">
-                                <container-layout
-                                    :componentList="col.componentList"
-                                    class="vp-component-list"
-                                    :data-comp-id="col.id"
-                                    v-if="!col.hidden"
-                                    :refs="refs"
-                                />
-                            </vp-col>
-                        </template>
-                    </vp-row>
-                </template>
                 <template v-else-if="!!comp.componentList">
                     <container-layout
+                        :key="index"
                         v-if="!comp.hidden"
                         class="vp-component-list"
                         :class="getComponentWrapClass(comp)"
@@ -90,10 +52,7 @@
     </div>
 </template>
 <script>
-import { vpRow, vpCol } from '../layout';
-
 export default {
-    components: { vpRow, vpCol },
     props: {
         componentList: Array,
         refs: Object
