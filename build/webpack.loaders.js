@@ -1,22 +1,22 @@
 module.exports = [
     {
         test: /\.js$/i,
-        loader: 'babel-loader',
+        use: 'babel-loader',
     },
     {
         test: /\.vue$/i,
-        loader: 'vue-loader'
+        use: 'vue-loader',
     },
     {
         test: /\.(css)$/i,
-        loader: [
+        use: [
             'style-loader',
             'css-loader'
         ],
     },
     {
         test: /\.less$/i,
-        loader: [
+        use: [
             'style-loader',
             'css-loader',
             'less-loader',
