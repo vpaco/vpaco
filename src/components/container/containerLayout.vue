@@ -2,7 +2,7 @@
     <div>
         <template v-for="(comp, index) in componentList">
             <template v-if="!comp.hidden">
-                <template v-else-if="!!comp.componentList">
+                <template v-if="!!comp.componentList">
                     <container-layout
                         :key="index"
                         v-if="!comp.hidden"
