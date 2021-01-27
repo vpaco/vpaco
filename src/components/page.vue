@@ -26,9 +26,6 @@ export default {
         config: {
             type: Object
         },
-        value: {
-            default: undefined
-        },
         isRemote: {
             type: Boolean,
             default: false
@@ -51,11 +48,6 @@ export default {
 
     created() {
         this.bindEvents();
-        if (this.value !== undefined) {
-            this.$set(this.innerOptions, 'value', this.value);
-        } else if (this.innerOptions.value === undefined) {
-            this.$set(this.innerOptions, 'value', undefined);
-        }
     },
 
     watch: {
@@ -63,19 +55,13 @@ export default {
             this.innerPage = this.name;
         },
 
-        options() {
-            this.innerOptions = this.options || {};
-        },
-
-        value() {
-            this.$set(this.innerOptions, 'value', this.value);
-        },
-
-        'innerOptions.value'() {
-            if (this.options.value !== this.value) {
-                this.$emit('input', this.innerOptions.value);
+        options: {
+            deep: true,
+            handler() {
+                this.innerOptions = this.options || {};
             }
         },
+
         events(newVal, oldVal) {
             for (const key in oldVal) {
                 this.$off(key);

@@ -36,18 +36,6 @@ export default function (component) {
                 events[it] = this.events[it];
             });
 
-            if (this.options.value !== undefined) {
-                events['input'] = val => {
-                    this.options.value = val;
-                };
-            }
-
-            if (this.options.model !== undefined) {
-                events['input'] = val => {
-                    this.options.model = val;
-                };
-            }
-
             Object.keys(this.slots || {}).forEach(it => {
                 slots[it] = props => {
                     return this.slots[it](h, props);

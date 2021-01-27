@@ -30,9 +30,6 @@
             name: {
                 type: String
             },
-            value: {
-                default: undefined
-            }
         },
 
         data: function () {
@@ -50,23 +47,9 @@
                     this.innerComponent = name;
                 });
             },
-
-            value() {
-                this.options.value = this.value;
-            },
-
-            'options.value'() {
-                if (this.options.value !== this.value) {
-                    this.$emit('input', this.options.value);
-                }
-            }
         },
 
         created() {
-            if (this.value !== undefined) {
-                this.$set(this.options, 'value', this.value);
-            }
-
             this.isRemote = isRemoteComponent(this.name)
             getProxyComponent(this.name, this.isRemote).then(name => {
                 this.innerComponent = name;
