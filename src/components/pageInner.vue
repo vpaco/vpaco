@@ -138,7 +138,9 @@
                 this._initAncestorRefs();
 
                 let configCallback = rawPageConfig.config;
-                let config = configCallback ? configCallback(this) : {};
+                let config = configCallback ? (()=>{
+                    return configCallback.bind(this)(this);
+                })() : {};
 
                 let {options, events, methods, init, mounted, optionsChange, destroy} = config;
 
