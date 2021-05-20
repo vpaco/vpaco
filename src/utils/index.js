@@ -1,7 +1,8 @@
-import {getConfig, getVue} from '../config';
+import {getConfig, getApp} from '../config';
 import proxy from './proxy';
 import _endsWith from 'lodash/endsWith';
 import {RemoteComponent} from './RemoteComponent';
+import {reactive, isReactive} from 'vue'
 
 let loadedModules = {};
 
@@ -104,41 +105,6 @@ function checkLayoutNameRepeat(names, name) {
     return hasOne;
 }
 
-export function mergeRows(componentList, options, events, slots) {
-    for (const component of componentList) {
-        if (component.componentList) {
-            mergeRows(component.componentList, options, events, slots);
-        } else if (component.type === 'row') {
-            for (const item of component.componentList) {
-                mergeRows(item.componentList, options, events, slots);
-            }
-        } else {
-            if (component.name && options[component.name]) {
-                let val = options[component.name];
-                Object.defineProperty(options, component.name, {
-                    get(){
-                        return val;
-                    },
-                    set(newValue){
-                        component.options = newValue;
-                    }
-                });
-                component.options = options[component.name];
-            }
-
-            if (component.name && slots[component.name]) {
-                component.slots = slots[component.name];
-            }
-
-            if (component.name && events[component.name]) {
-                component.events = events[component.name];
-            } else {
-                component.events = {};
-            }
-        }
-    }
-}
-
 export function loadComponent(layout, pageConfig, pageName) {
     return loadComponent_(layout.componentList, pageConfig, pageName);
 }
@@ -170,7 +136,7 @@ function getRemoteComponentUrl(name) {
 }
 
 export async function getProxyComponent(name, isRemote, pageConfig, pageName) {
-    const Vue = getVue();
+    const app = getApp();
     const appConfig = getConfig();
 
     if (!appConfig.components[name] &&
@@ -191,8 +157,8 @@ export async function getProxyComponent(name, isRemote, pageConfig, pageName) {
         }else if(appConfig.components[name]) {
             proxyName = name + '_proxy';
         }
-        if (!Vue.component(proxyName)) {
-            Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
+        if (!app.component(proxyName)) {
+            app.component(proxyName, proxy(component.__esModule ? component.default : component));
         }
 
         return proxyName;

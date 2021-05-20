@@ -1,11 +1,12 @@
 <template>
-    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass"/>
+    <Container :config="pageConfig" :refsUpdated="refsUpdated" v-if="pageConfig && visible" :class="getPageClass"/>
 </template>
 <script>
-    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig} from '../utils';
+    import {log, deepCopy, loadComponent, toString, getPageConfig} from '../utils';
     import Container from './container/container';
     import {getConfig} from '../config';
     import isArray from 'isarray';
+    import {reactive, ref, watch, onUnmounted, nextTick, toRefs} from 'vue'
 
     export default {
         components: {Container},
@@ -13,300 +14,252 @@
             page: {
                 type: String
             },
-            options: {
-                type: Object
-            },
-            events: {
+            props: {
                 type: Object
             },
             config: {
-                type: Object
+                type: Function
             },
             isRemote: {
                 type: Boolean
             },
-        },
-
-        data: function () {
-            return {
-                vpIsPage: true,
-                pageConfig: null,
-                historyList: [],
-                visible: false,
-                lastPage: null,
-                innerOptions: null,
-                layout: null
-            };
-        },
-
-        watch: {
-            page: function () {
-                this.reloadPage();
-            },
-
-            config: function(){
-                this.reloadPage();
-            },
-
-            options: {
-                deep: true,
-                handler(val, oldVal) {
-                    this.$nextTick(() => {
-                        this.optionsChange && this.optionsChange(val, oldVal);
-                    });
-                }
+            updatePage: {
+                type: Function
             }
         },
 
-        created() {
+        setup(props, context){
+            watch([()=>props.page, ()=>props.config], ()=>{
+                reloadPage()
+            })
+
+            watch(()=>{return props.props}, (val, oldVal)=>{
+                propsChangeCallback && propsChangeCallback(val, oldVal);
+            })
+
             const appConfig = getConfig();
 
-            this.refs = {};
-            this.layoutRefs = {};
-            this.ancestorRefs = {};
+            const pageConfig = ref({})
+            const visible = ref(false)
+            const outerMethods = reactive({})
 
-            const pageKeyword = ['page', 'options', 'events', 'refs', 'layoutRefs', 'ancestorRefs', 'vpIsPage', 'pageConfig', 'historyList', 'visible', 'lastPage', 'innerOptions', 'layout', 'merge', 'reloadPage', '_initAncestorRefs', '_initLayoutRefs', 'emit', 'pushPage', 'popPage', 'getParentPageList']
-
-            for (const key in appConfig.extensions) {
-                if (pageKeyword.includes(key)) {
-                    // eslint-disable-next-line no-console
-                    console.error(`${key}为页面关键字，请更换名称`);
+            let lastPage = null,
+                destroyCallback = null,
+                propsChangeCallback = null,
+                historyList = [],
+                pageContext = {
+                    ancestorRefs: {},
+                    refs: {},
+                    layoutRefs: {}
                 }
-                this[key] = appConfig.extensions[key].bind(this);
+
+            const refsUpdated = (t) => {
+                pageContext.refs = t
             }
 
-            this.reloadPage();
-        },
-
-        methods: {
-            getPageClass(){
-                const pageName = (this.page || (this.config && this.config.name))
+            const getPageClass = ()=>{
+                const pageName = props.page || (props.config && props.config.name)
                 if(pageName){
                     return 'vp-page-' + pageName;
                 }else{
                     return '';
                 }
-            },
-            merge(layout, {slots = {}, events = {}, options = {}, methods = {}}) {
-                if (!layout) {
-                    return null;
-                }
-                for (const key in methods) {
-                    this[key] = methods[key];
-                }
+            }
 
-                if (layout.componentList) {
-                    mergeRows(layout.componentList, options, events, slots);
-                }
-
-                return layout;
-            },
-            async reloadPage() {
-                if (this.lastPage) {
-                    this.destroy && this.destroy();
-                    log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
-                }
-                const appConfig = getConfig();
-                this.lastPage = null;
-                if (!this.page && !this.config) {
-                    this.pageConfig = null;
-                    return;
-                }
-
-                let rawPageConfig;
-
-                if(this.config){
-                    rawPageConfig = this.config;
-                }else {
-                    rawPageConfig = await getPageConfig(this.page, this, this.isRemote);
-                }
-
-                if (this.page && !rawPageConfig) {
-                    return;
-                }
-
-                let layout = rawPageConfig.layout;
-
-                this.rawPageConfig = rawPageConfig;
-
-                layout = deepCopy(layout);
-                if (isArray(layout)) {
-                    layout = {componentList: layout};
-                } else if (!layout.componentList) {
-                    layout = {componentList: [layout]};
-                }
-                this._initLayoutRefs([layout]);
-
-                this._initAncestorRefs();
-
-                let configCallback = rawPageConfig.config;
-                let config = configCallback ? (()=>{
-                    return configCallback.bind(this)(this);
-                })() : {};
-
-                let {options, events, methods, init, mounted, optionsChange, destroy} = config;
-
-                this.destroy = destroy;
-                this.optionsChange = optionsChange;
-                this.pageConfig = null;
-                this.visible = false;
-                let pageConfig = this.merge(layout, config);
-                this.innerPageConfig = pageConfig;
-                this.$nextTick(() => {
-                    this.refs = {};
-                    // 空页面
-                    if (!layout) {
-                        return;
-                    }
-                    // 加载组件
-                    loadComponent(layout, rawPageConfig, this.page).then(() => {
-                        this.$emit('on-component-ready');
-
-                        const showPage = () => {
-                            let logOptions = null;
-                            if (appConfig.debug) {
-                                logOptions = deepCopy(this.options) || {};
-                            }
-                            if (init) {
-                                if (appConfig.debug) {
-                                    log.debug(`[page init] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                }
-                                init(() => {
-                                    this.visible = true;
-                                    this.pageConfig = pageConfig;
-                                    this.innerOptions = options;
-                                    this.lastPage = this.page;
-                                    if (appConfig.debug) {
-                                        log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                    }
-                                    this.$nextTick(() => {
-                                        this.$parent.$emit('on-rendered');
-                                        this._page_rendered = true;
-                                        mounted && mounted();
-                                    });
-                                });
-                            } else {
-                                this.visible = true;
-                                this.pageConfig = pageConfig;
-                                this.innerOptions = options;
-                                this.lastPage = this.page;
-                                this.$nextTick(() => {
-                                    this._page_rendered = true;
-                                    this.$parent.$emit('on-rendered');
-                                });
-                                if (appConfig.debug) {
-                                    log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                }
-                            }
-                        };
-
-                        if (appConfig.beforePageEnter) {
-                            if (appConfig.debug) {
-                                log.debug(`[page before enter] > pageName: ${this.page}`, true);
-                            }
-                            appConfig.beforePageEnter(
-                                {
-                                    pageName: this.page,
-                                    options: options
-                                },
-                                () => {
-                                    showPage();
-                                }
-                            );
-                        } else {
-                            showPage();
-                        }
-                    });
-                });
-            },
-
-            _initAncestorRefs() {
-                let ancestorPageList = this.getParentPageList();
-
-                for (const it of ancestorPageList) {
-                    this.ancestorRefs[it.page] = it;
-                }
-            },
-
-            _initLayoutRefs(list) {
-                for (const it of list) {
-                    if (it.name) {
-                        this.layoutRefs[it.name] = it;
-                    }
-                    if (it.componentList) {
-                        this._initLayoutRefs(it.componentList);
-                    }
-                }
-            },
-
-            emit(a, b, c, d, e) {
-                this.$parent.$emit(a, b, c, d, e);
-            },
-
-            pushPage(page, options) {
+            const pushPage = (page, _props) => {
                 if (page === -1) {
-                    const last = this.historyList.pop();
+                    const last = historyList.pop();
 
                     if (!last) {
                         return -1;
                     }
 
                     page = last.page;
-                    options = last.options;
+                    _props = last.props;
                 } else {
-                    this.historyList.push({page: this.page, options: this.options});
+                    historyList.push({page: page, props: _props});
                 }
 
-                this.$emit('update:page', '');
+                props.updatePage(page, _props)
+            }
 
-                this.$nextTick(() => {
-                    this.$emit('update:options', options);
-                    this.$nextTick(() => {
-                        this.$emit('update:page', page);
-                    });
-                });
-            },
-
-            popPage() {
-                const last = this.historyList.pop();
+            const popPage = () => {
+                const last = historyList.pop();
 
                 if (!last) {
                     return -1;
                 }
 
                 const page = last.page;
-                const options = last.options;
+                const props = last.props;
 
-                this.$emit('update:page', '');
+                props.updatePage(page, props)
+            }
 
-                this.$nextTick(() => {
-                    this.$emit('update:options', options);
-                    this.$emit('update:page', page);
-                });
-            },
-
-            getParentPageList() {
+            const getParentPageList = () => {
                 let res = [];
-                let parent = this;
+                let parent = context;
 
                 do {
                     if (parent.vpIsPage) {
                         res.push(parent);
-                        parent = parent.$parent;
+                        parent = parent.parent;
                     } else {
-                        parent = parent.$parent;
+                        parent = parent.parent;
                     }
-                } while (parent && parent.$parent);
+                } while (parent && parent.parent);
 
                 return res;
             }
-        },
 
-        destroyed() {
-            if (this.lastPage) {
-                this.destroy && this.destroy();
-                log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
+            const initAncestorRefs = () => {
+                let ancestorPageList = getParentPageList();
+
+                for (const it of ancestorPageList) {
+                    pageContext.ancestorRefs[it.page] = it;
+                }
             }
+
+            const initLayoutRefs = (list) => {
+                for (const it of list) {
+                    if (it.name) {
+                        pageContext.layoutRefs[it.name] = it;
+                    }
+                    if (it.componentList) {
+                        initLayoutRefs(it.componentList);
+                    }
+                }
+            }
+
+            const reloadPage = async () => {
+                const {page, config, isRemote} = props
+                if (lastPage) {
+                    destroyCallback && destroyCallback();
+                    log.debug(`[page destroy] > pageName: ${lastPage}`, true);
+                }
+                const appConfig = getConfig();
+                lastPage = null;
+                if (!page && !config) {
+                    pageConfig.value = null;
+                    return;
+                }
+
+                let pageConfigCallback;
+
+                if(config){
+                    pageConfigCallback = config;
+                }else {
+                    pageConfigCallback = await getPageConfig(page, context, isRemote);
+                }
+
+                if (page && !pageConfigCallback) {
+                    return;
+                }
+
+                initAncestorRefs();
+
+                let pageInstance = pageConfigCallback ? (()=>{
+                    return pageConfigCallback(pageContext);
+                })() : {};
+
+                let {layout, methods, init, mounted, propsChange, destroy} = pageInstance;
+
+                if(methods){
+                    Object.keys(methods).forEach((it)=>{
+                        outerMethods[it] = methods[it]
+                    })
+                }
+
+                if (isArray(layout)) {
+                    layout = {componentList: layout};
+                } else if (!layout.componentList) {
+                    layout = {componentList: [layout]};
+                }
+                initLayoutRefs([layout]);
+
+                destroyCallback = destroy;
+                propsChangeCallback = propsChange;
+                visible.value = false;
+                pageContext.refs = {};
+                // 空页面
+                if (!layout) {
+                    return;
+                }
+                // 加载组件
+                loadComponent(layout, pageInstance, page).then(() => {
+                    context.emit('on-component-ready');
+
+                    const showPage = () => {
+                        let logOptions = null;
+                        if (appConfig.debug) {
+                            logOptions = deepCopy(this.props) || {};
+                        }
+                        if (init) {
+                            if (appConfig.debug) {
+                                log.debug(`[page init] > pageName: ${page};  options: ${toString(logOptions)}`, true);
+                            }
+                            init(() => {
+                                visible.value = true;
+                                pageConfig.value = layout
+                                lastPage = page;
+                                if (appConfig.debug) {
+                                    log.debug(`[page start] > pageName: ${page};  options: ${toString(logOptions)}`, true);
+                                }
+                                nextTick(() => {
+                                    mounted && mounted();
+                                });
+                            });
+                        } else {
+                            visible.value = true;
+                            pageConfig.value = layout
+                            lastPage = page;
+                            if (appConfig.debug) {
+                                log.debug(`[page start] > pageName: ${page};  options: ${toString(logOptions)}`, true);
+                            }
+                        }
+                    };
+
+                    if (appConfig.beforePageEnter) {
+                        if (appConfig.debug) {
+                            log.debug(`[page before enter] > pageName: ${page}`, true);
+                        }
+                        appConfig.beforePageEnter(
+                            {
+                                pageName: page,
+                            },
+                            () => {
+                                showPage();
+                            }
+                        );
+                    } else {
+                        showPage();
+                    }
+                });
+            }
+
+            const pageKeyword = ['page', 'options', 'refs', 'layoutRefs', 'ancestorRefs', 'vpIsPage', 'pageConfig', 'historyList', 'visible', 'lastPage', 'innerOptions', 'layout', 'reloadPage', '_initAncestorRefs', '_initLayoutRefs', 'emit', 'pushPage', 'popPage', 'getParentPageList']
+
+            for (const key in appConfig.extensions) {
+                if (pageKeyword.includes(key)) {
+                    // eslint-disable-next-line no-console
+                    console.error(`${key}为页面关键字，请更换名称`);
+                }
+                context[key] = appConfig.extensions[key].bind(context);
+            }
+
+            reloadPage();
+
+            onUnmounted(()=>{
+                if (lastPage) {
+                    destroyCallback && destroyCallback();
+                    log.debug(`[page destroy] > pageName: ${lastPage}`, true);
+                }
+            })
+
+            pageContext.pushPage = pushPage
+            pageContext.popPage = popPage
+
+            return {refsUpdated, pageConfig, visible, getPageClass, pushPage, popPage, outerMethods}
         }
     };
 </script>

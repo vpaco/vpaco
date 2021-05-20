@@ -1,5 +1,5 @@
 <template>
-    <ContainerLayout :componentList="config.componentList" :class="config.class" :refs="refs" :style="config.style" />
+    <ContainerLayout :componentList="config.componentList" :refsUpdated="refsUpdated" :class="config.class" :style="config.style" />
 </template>
 <script>
 import ContainerLayout from './containerLayout.vue';
@@ -7,7 +7,7 @@ import ContainerLayout from './containerLayout.vue';
 export default {
     props: {
         config: Object,
-        refs: Object
+        refsUpdated: Function
     },
     components: { ContainerLayout }
 };

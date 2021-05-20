@@ -1,33 +1,28 @@
 <template>
     <page-inner
-        :page.sync="innerPage"
-        :events="events"
-        :options.sync="innerOptions"
+        :page="pageName"
+        :props="pageProps"
         :isRemote="isRemote"
         ref="page"
         :config="config"
+        :updatePage="updatePage"
         @on-component-ready="remoteLoaded" />
 </template>
 <script>
 import pageInner from './pageInner';
+import {ref} from 'vue'
 
 export default {
     components: { pageInner },
     props: {
-        options: {
-            type: Object
-        },
-        events: {
+        props: {
             type: Object
         },
         name: {
             type: String
         },
         config: {
-            type: Object
-        },
-        value: {
-            default: undefined
+            type: Function
         },
         isRemote: {
             type: Boolean,
@@ -41,62 +36,22 @@ export default {
         }
     },
 
-    data() {
-        return {
-            vpIsPageWrapper: true,
-            innerOptions: this.options || {},
-            innerPage: this.name
-        };
-    },
+    setup(props,context){
+        const pageName = ref(props.name)
+        const pageProps = ref(props.props)
+        const page = ref(null)
 
-    created() {
-        this.bindEvents();
-        if (this.value !== undefined) {
-            this.$set(this.innerOptions, 'value', this.value);
-        } else if (this.innerOptions.value === undefined) {
-            this.$set(this.innerOptions, 'value', undefined);
+        const updatePage = (page, props)=>{
+            pageName.value = page
+            pageProps.value = props
         }
-    },
 
-    watch: {
-        name: function () {
-            this.innerPage = this.name;
-        },
-
-        options() {
-            this.innerOptions = this.options || {};
-        },
-
-        value() {
-            this.$set(this.innerOptions, 'value', this.value);
-        },
-
-        'innerOptions.value'() {
-            if (this.options.value !== this.value) {
-                this.$emit('input', this.innerOptions.value);
-            }
-        },
-        events(newVal, oldVal) {
-            for (const key in oldVal) {
-                this.$off(key);
-            }
-
-            this.bindEvents();
-        }
+        return {pageName, pageProps, updatePage, page}
     },
 
     methods: {
-        bindEvents() {
-            for (const event in this.events) {
-                this.$off(event);
-                let self = this;
-                this.$on(event, (...args) => {
-                    self.events[event](...args);
-                });
-            }
-        },
-        pushPage(page, options) {
-            this.$refs.page.pushPage(page, options);
+        pushPage(page, props) {
+            this.$refs.page.pushPage(page, props);
         },
 
         getPage() {

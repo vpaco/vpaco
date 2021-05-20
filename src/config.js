@@ -7,18 +7,18 @@ let globalConfig = {
     extendsions: {}
 };
 
-let Vue = null;
+let App = null;
 
 export function getConfig() {
     return globalConfig;
 }
 
-export function setVue(vue) {
-    Vue = vue;
+export function setApp(app) {
+    App = app;
 }
 
-export function getVue(vue) {
-    return Vue;
+export function getApp() {
+    return App;
 }
 
 export function addPage(key, value) {
@@ -42,9 +42,9 @@ export async function register(config) {
         const component = config.components[key];
 
         if (component.__esModule) {
-            Vue.component(`vpaco_${key}`, component.default);
+            App.component(`vpaco_${key}`, component.default);
         } else {
-            Vue.component(`vpaco_${key}`, component);
+            App.component(`vpaco_${key}`, component);
         }
     }
 

@@ -1,13 +1,9 @@
-import { getVue } from '../config';
+import {defineComponent, h, ref, toRefs, reactive} from 'vue'
 
 export default function (component) {
-    const Vue = getVue();
-    return Vue.extend({
+    return defineComponent({
         props: {
-            options: {
-                type: Object
-            },
-            events: {
+            props: {
                 type: Object
             },
             slots: {
@@ -21,64 +17,44 @@ export default function (component) {
 
             remoteComponent: Boolean
         },
-        data() {
-            return {
-                vpComponentWrapper: true
-            };
+        setup(props){
+            const root = ref(null)
+            const state = reactive(props.props)
+            return {root, ...toRefs(state), state}
         },
-        render(h) {
+        render() {
             const Component = component;
-            const events = {},
-                slots = {},
+            const slots = {},
                 childrenEl = [];
-
-            Object.keys(this.events || {}).forEach(it => {
-                events[it] = this.events[it];
-            });
-
-            if (this.options.value !== undefined) {
-                events['input'] = val => {
-                    this.options.value = val;
-                };
-            }
-
-            if (this.options.model !== undefined) {
-                events['input'] = val => {
-                    this.options.model = val;
-                };
-            }
 
             Object.keys(this.slots || {}).forEach(it => {
                 slots[it] = props => {
                     return this.slots[it](h, props);
                 };
 
-                if (it === 'default') {
-                    childrenEl.push(slots[it]());
-                }
-
                 childrenEl.push(
-                    h('div', {
-                        slot: it
-                    })
+                    h('div', slots)
                 );
             });
 
-            return h(
+            window.zzzz = this
+
+            const elRoot = h(
                 Component,
                 {
-                    props: this.options || {},
-                    scopedSlots: slots,
-                    on: events,
-                    style: this.options.$style,
-                    class: this.options.$class
+                    ...this.state,
+                    style: this.props.$style,
+                    class: this.props.$class
                 },
                 childrenEl
             );
+
+            this.root = elRoot
+            return elRoot
         },
 
         mounted() {
-            let comp = this.$children[0];
+            let comp = this.root;
             if (component.methods) {
                 Object.keys(component.methods).forEach(it => {
                     this[it] = component.methods[it].bind(comp);

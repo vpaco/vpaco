@@ -21,7 +21,7 @@
     "rules": {
         "indent": ["error", 4, { "SwitchCase": 1 }],
         "quotes": ["error", "single"],
-        "semi": ["error", "always"],
+        "semi": [0, "always"],
         "vue/jsx-uses-vars": 2,
         "no-console": ["error"],
         "no-multiple-empty-lines": ["error", {"max": 2}],

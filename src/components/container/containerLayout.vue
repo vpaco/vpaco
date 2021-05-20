@@ -26,21 +26,6 @@
                         :componentList="comp.componentList"
                     />
                 </template>
-                <template v-else-if="comp.type == 'row'">
-                    <vp-row :class="getComponentWrapClass(comp)" :data-comp-id="comp.id" :key="index" :style="comp.style" :gutter="comp.gutter">
-                        <template v-for="col in comp.componentList">
-                            <vp-col :span="col.span" :class="col.class" :style="col.style">
-                                <container-layout
-                                    :componentList="col.componentList"
-                                    class="vp-component-list"
-                                    :data-comp-id="col.id"
-                                    v-if="!col.hidden"
-                                    :refs="refs"
-                                />
-                            </vp-col>
-                        </template>
-                    </vp-row>
-                </template>
                 <template v-else-if="!!comp.componentList">
                     <container-layout
                         v-if="!comp.hidden"
@@ -63,25 +48,23 @@
                     <component
                         v-if="comp.component"
                         :is="comp.component"
-                        :options="comp.options || {}"
-                        :events="comp.events || {}"
+                        :props="comp.props || {}"
                         :slots="comp.slots || {}"
                         :vp-is-page-component="true"
                         :vp-page-component-name="comp.name"
                         :remote-component="!!comp.remoteComponent"
                         :vp-component-name="comp.component"
-                        ref="component"
+                        :ref="(el)=>{componentRefs.push(el)}"
                         :class="getComponentContentStyle(comp)"
                     />
                     <VpPage
                         v-if="comp.page || comp.remotePage"
                         :name="comp.page || comp.remotePage"
-                        :options="comp.options || {}"
-                        :events="comp.events || {}"
+                        :props="comp.props || {}"
                         :isRemote="!!comp.remotePage"
                         :class="getComponentContentStyle(comp)"
                         :vp-page-component-name="comp.name"
-                        ref="page"
+                        :ref="(el)=>{pageRefs.push(el)}"
                         :vp-is-page-component="true"
                     />
                 </div>
@@ -90,39 +73,43 @@
     </div>
 </template>
 <script>
-import { vpRow, vpCol } from '../layout';
-
+import {ref, onBeforeUpdate, onUpdated, onMounted, watchEffect, nextTick} from 'vue'
 export default {
-    components: { vpRow, vpCol },
     props: {
         componentList: Array,
-        refs: Object
+        refsUpdated: Function
     },
     name: 'containerLayout',
 
-    mounted() {
-        this.setComponentRefs();
-        for (const component of this.componentList ?? []) {
-            this.$watch(
-                () => {
-                    return component.hidden;
-                },
-                () => {
-                    this.setComponentRefs();
+    setup(props, context){
+        const componentRefs = ref([])
+        const pageRefs = ref([])
+
+        onBeforeUpdate(()=>{
+            componentRefs.value = []
+            pageRefs.value = []
+            console.log('updatexx')
+        })
+
+        watchEffect(()=>{
+            nextTick(()=>{
+                const refs = {}
+                for (const it of componentRefs.value ?? []) {
+                    refs[it.vpPageComponentName] = it;
                 }
-            );
-        }
+                for (const it of pageRefs.value ?? []) {
+                    refs[it.vpPageComponentName] = it.$refs.page.outerMethods;
+                }
+
+                props.refsUpdated(refs)
+            })
+        })
+
+
+        return {componentRefs, pageRefs}
     },
 
     methods: {
-        setComponentRefs() {
-            for (const it of this.$refs.component ?? []) {
-                this.refs[it.vpPageComponentName] = it;
-            }
-            for (const it of this.$refs.page ?? []) {
-                this.refs[it.vpPageComponentName] = it.$children[0];
-            }
-        },
         getComponentContentStyle(col) {
             const style = {};
             if (col.name) {
