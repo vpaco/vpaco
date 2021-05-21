@@ -16,9 +16,6 @@
             options: {
                 type: Object
             },
-            events: {
-                type: Object
-            },
             config: {
                 type: Object
             },
@@ -67,13 +64,13 @@
 
             const pageKeyword = ['page', 'options', 'events', 'refs', 'layoutRefs', 'ancestorRefs', 'vpIsPage', 'pageConfig', 'historyList', 'visible', 'lastPage', 'innerOptions', 'layout', 'merge', 'reloadPage', '_initAncestorRefs', '_initLayoutRefs', 'emit', 'pushPage', 'popPage', 'getParentPageList']
 
-            for (const key in appConfig.extensions) {
+            Object.keys(appConfig.extensions || {}).forEach((key)=>{
                 if (pageKeyword.includes(key)) {
                     // eslint-disable-next-line no-console
                     console.error(`${key}为页面关键字，请更换名称`);
                 }
                 this[key] = appConfig.extensions[key].bind(this);
-            }
+            });
 
             this.reloadPage();
         },
@@ -91,9 +88,9 @@
                 if (!layout) {
                     return null;
                 }
-                for (const key in methods) {
+                Object.keys(methods  || {}).forEach((key)=>{
                     this[key] = methods[key];
-                }
+                });
 
                 if (layout.componentList) {
                     mergeRows(layout.componentList, options, events, slots);
@@ -101,26 +98,29 @@
 
                 return layout;
             },
-            async reloadPage() {
+            reloadPage() {
                 if (this.lastPage) {
                     this.destroy && this.destroy();
                     log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
                 }
-                const appConfig = getConfig();
+
                 this.lastPage = null;
                 if (!this.page && !this.config) {
                     this.pageConfig = null;
                     return;
                 }
 
-                let rawPageConfig;
-
                 if(this.config){
-                    rawPageConfig = this.config;
+                    this.renderPage(this.config);
                 }else {
-                    rawPageConfig = await getPageConfig(this.page, this, this.isRemote);
+                    getPageConfig(this.page, this, this.isRemote).then((config)=>{
+                        this.renderPage(config);
+                    });
                 }
+            },
 
+            renderPage (rawPageConfig) {
+                const appConfig = getConfig();
                 if (this.page && !rawPageConfig) {
                     return;
                 }
@@ -144,7 +144,7 @@
                     return configCallback.bind(this)(this);
                 })() : {};
 
-                let {options, events, methods, init, mounted, optionsChange, destroy} = config;
+                let {options, setup, mounted, optionsChange, destroy} = config;
 
                 this.destroy = destroy;
                 this.optionsChange = optionsChange;
@@ -167,11 +167,11 @@
                             if (appConfig.debug) {
                                 logOptions = deepCopy(this.options) || {};
                             }
-                            if (init) {
+                            if (setup) {
                                 if (appConfig.debug) {
-                                    log.debug(`[page init] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                                    log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                                 }
-                                init(() => {
+                                setup(() => {
                                     this.visible = true;
                                     this.pageConfig = pageConfig;
                                     this.innerOptions = options;
@@ -223,20 +223,20 @@
             _initAncestorRefs() {
                 let ancestorPageList = this.getParentPageList();
 
-                for (const it of ancestorPageList) {
+                ancestorPageList.forEach((it) => {
                     this.ancestorRefs[it.page] = it;
-                }
+                });
             },
 
             _initLayoutRefs(list) {
-                for (const it of list) {
+                list.forEach((it)=>{
                     if (it.name) {
                         this.layoutRefs[it.name] = it;
                     }
                     if (it.componentList) {
                         this._initLayoutRefs(it.componentList);
                     }
-                }
+                });
             },
 
             emit(a, b, c, d, e) {

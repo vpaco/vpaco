@@ -31,14 +31,14 @@ export function addPage(key, value) {
     globalConfig.pages[key] = value;
 }
 
-export async function register(config) {
+export function register(config) {
     globalConfig = config;
 
     config.components = config.components || {};
     config.remoteComponents = config.remoteComponents || {};
     config.pages = config.pages || {};
 
-    for (let key in config.components) {
+    Object.keys(config.components || {}).forEach((key)=>{
         const component = config.components[key];
 
         if (component.__esModule) {
@@ -46,9 +46,13 @@ export async function register(config) {
         } else {
             Vue.component(`vpaco_${key}`, component);
         }
-    }
+    });
 
     if (globalConfig.remoteComponentsUrl) {
-        globalConfig.remoteComponents = await loadRemoteModule(globalConfig.remoteComponentsUrl);
+        return loadRemoteModule(globalConfig.remoteComponentsUrl).then((res)=>{
+            globalConfig.remoteComponents = res;
+        });
+    }else{
+        return Promise.resolve();
     }
 }

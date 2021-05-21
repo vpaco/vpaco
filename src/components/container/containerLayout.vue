@@ -2,46 +2,7 @@
     <div>
         <template v-for="(comp, index) in componentList">
             <template v-if="!comp.hidden">
-                <template v-if="comp.type == 'body'">
-                    <container-layout
-                        class="vp-component-list"
-                        :key="index"
-                        :class="getComponentWrapClass(comp)"
-                        :data-comp-id="comp.id"
-                        :style="comp.style"
-                        v-if="!comp.hidden"
-                        :refs="refs"
-                        :componentList="comp.componentList"
-                    />
-                </template>
-                <template v-else-if="comp.type == 'component'">
-                    <container-layout
-                        class="vp-component-list"
-                        :key="index"
-                        :class="getComponentWrapClass(comp)"
-                        :data-comp-id="comp.id"
-                        :style="comp.style"
-                        v-if="!comp.hidden"
-                        :refs="refs"
-                        :componentList="comp.componentList"
-                    />
-                </template>
-                <template v-else-if="comp.type == 'row'">
-                    <vp-row :class="getComponentWrapClass(comp)" :data-comp-id="comp.id" :key="index" :style="comp.style" :gutter="comp.gutter">
-                        <template v-for="col in comp.componentList">
-                            <vp-col :span="col.span" :class="col.class" :style="col.style">
-                                <container-layout
-                                    :componentList="col.componentList"
-                                    class="vp-component-list"
-                                    :data-comp-id="col.id"
-                                    v-if="!col.hidden"
-                                    :refs="refs"
-                                />
-                            </vp-col>
-                        </template>
-                    </vp-row>
-                </template>
-                <template v-else-if="!!comp.componentList">
+                <template v-if="!!comp.componentList">
                     <container-layout
                         v-if="!comp.hidden"
                         class="vp-component-list"
@@ -64,7 +25,6 @@
                         v-if="comp.component"
                         :is="comp.component"
                         :options="comp.options || {}"
-                        :events="comp.events || {}"
                         :slots="comp.slots || {}"
                         :vp-is-page-component="true"
                         :vp-page-component-name="comp.name"
@@ -77,7 +37,6 @@
                         v-if="comp.page || comp.remotePage"
                         :name="comp.page || comp.remotePage"
                         :options="comp.options || {}"
-                        :events="comp.events || {}"
                         :isRemote="!!comp.remotePage"
                         :class="getComponentContentStyle(comp)"
                         :vp-page-component-name="comp.name"
@@ -85,15 +44,17 @@
                         :vp-is-page-component="true"
                     />
                 </div>
+                <div v-else-if="comp.options && comp.options.render">
+                  <functional :render="comp.options.render"></functional>
+                </div>
             </template>
         </template>
     </div>
 </template>
 <script>
-import { vpRow, vpCol } from '../layout';
-
+import functional from '../../utils/functional';
 export default {
-    components: { vpRow, vpCol },
+    components: {functional},
     props: {
         componentList: Array,
         refs: Object
@@ -102,7 +63,7 @@ export default {
 
     mounted() {
         this.setComponentRefs();
-        for (const component of this.componentList ?? []) {
+        (this.componentList || []).forEach((component)=>{
             this.$watch(
                 () => {
                     return component.hidden;
@@ -111,17 +72,17 @@ export default {
                     this.setComponentRefs();
                 }
             );
-        }
+        });
     },
 
     methods: {
         setComponentRefs() {
-            for (const it of this.$refs.component ?? []) {
+            (this.$refs.component || []).forEach((it)=>{
                 this.refs[it.vpPageComponentName] = it;
-            }
-            for (const it of this.$refs.page ?? []) {
+            });
+            (this.$refs.page || []).forEach((it)=>{
                 this.refs[it.vpPageComponentName] = it.$children[0];
-            }
+            });
         },
         getComponentContentStyle(col) {
             const style = {};

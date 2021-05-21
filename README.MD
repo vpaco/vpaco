@@ -54,22 +54,12 @@ export default {
             alias2: {}
         }
 
-        const events = {
-            alias1: {
-                'on-change'(){
-
-                }
-            },
-            alias2: {}
-        }
-
         const methods = {
 
         }
 
         return {
             options,
-            events,
             methods
         }
     }
@@ -88,7 +78,6 @@ export default {
 | refs    | 属性  | 页面组件实例引用 |-|
 | layoutRefs    | 属性  | layout中布局对象引用 |-|
 | reloadPage    | 方法  | 刷新页面 |-|
-| emit        | 方法 | 抛出事件 |(...) |
 | pushPage  | 方法| 页面替换 | (page, options) |
 | popPage     | 方法| 页面返回，pushPage相反 | - |
 
@@ -107,9 +96,8 @@ export default {
 |    Name    |   Description   |
 | :--------: | :--------: |
 | options | 组件配置 |
-| events    | 组件事件  |
 | methods    | 页面方法  |
-| init    | 页面初始化钩子  |
+| setup    | 页面初始化钩子  |
 | mounted    | 页面渲染完成钩子  |
 | optionsChange    | 页面入参改变钩子  |
 | destroy    | 页面销毁钩子  |

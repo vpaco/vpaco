@@ -51,9 +51,9 @@ export function deepCopy(obj) {
                 o.push(dp(data[i]));
             }
         } else if (t === 'object') {
-            for (let i in data) {
+            Object.keys(data).forEach((i)=>{
                 o[i] = dp(data[i]);
-            }
+            });
         }
         return o;
     }
@@ -69,15 +69,9 @@ export function getNames(config) {
 }
 
 function getNames_(componentList, names) {
-    for (let component of componentList) {
+    componentList.forEach((component)=>{
         if (component.componentList) {
             getNames_(component.componentList, names);
-        } else if (component.type === 'row') {
-            for (let item of component.componentList) {
-                if (item.componentList && item.componentList.length > 0) {
-                    getNames_(item.componentList, names);
-                }
-            }
         } else {
             if (component.name) {
                 if (checkLayoutNameRepeat(names, component.name)) {
@@ -90,7 +84,7 @@ function getNames_(componentList, names) {
                 names.push(component.name);
             }
         }
-    }
+    })
 }
 
 function checkLayoutNameRepeat(names, name) {
@@ -105,13 +99,9 @@ function checkLayoutNameRepeat(names, name) {
 }
 
 export function mergeRows(componentList, options, events, slots) {
-    for (const component of componentList) {
+    componentList.forEach((component)=>{
         if (component.componentList) {
             mergeRows(component.componentList, options, events, slots);
-        } else if (component.type === 'row') {
-            for (const item of component.componentList) {
-                mergeRows(item.componentList, options, events, slots);
-            }
         } else {
             if (component.name && options[component.name]) {
                 let val = options[component.name];
@@ -136,25 +126,28 @@ export function mergeRows(componentList, options, events, slots) {
                 component.events = {};
             }
         }
-    }
+    });
 }
 
 export function loadComponent(layout, pageConfig, pageName) {
     return loadComponent_(layout.componentList, pageConfig, pageName);
 }
 
-async function loadComponent_(componentList, pageConfig, pageName) {
+function loadComponent_(componentList, pageConfig, pageName) {
     const appConfig = getConfig();
-    for (let component of componentList) {
+    let defs = [];
+    componentList.forEach((component)=>{
         if (component.componentList) {
-            await loadComponent_(component.componentList, pageConfig, pageName);
+            defs.push(loadComponent_(component.componentList, pageConfig, pageName));
         } else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
-            await getProxyComponent(component.componentName, !!component.remoteComponent, pageConfig, pageName).then(proxyName => {
+            defs.push(getProxyComponent(component.componentName, !!component.remoteComponent, pageConfig, pageName).then(proxyName => {
                 component.component = proxyName;
-            });
+            }));
         }
-    }
+    });
+
+    return Promise.all(defs);
 }
 
 export function isRemoteComponent(name) {
@@ -169,7 +162,7 @@ function getRemoteComponentUrl(name) {
     return appConfig.remoteComponents[name];
 }
 
-export async function getProxyComponent(name, isRemote, pageConfig, pageName) {
+export function getProxyComponent(name, isRemote, pageConfig, pageName) {
     const Vue = getVue();
     const appConfig = getConfig();
 
@@ -195,23 +188,26 @@ export async function getProxyComponent(name, isRemote, pageConfig, pageName) {
             Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
         }
 
-        return proxyName;
+        return Promise.resolve(proxyName);
     }
 
     let url = name;
+    let defs = [];
     if (!_endsWith(url, '.js')) {
         url = appConfig.remoteComponents[name] || pageConfig && pageConfig.remoteComponents[name];
     }
 
-    const component = await loadRemoteModule(url);
-
     let proxyName = btoa(url).replace(/\=/g, '') + '_remote_proxy';
 
     if (!Vue.component(proxyName)) {
-        Vue.component(proxyName, proxy(component));
+        defs.push(loadRemoteModule(url).then((component)=>{
+            Vue.component(proxyName, proxy(component));
+        }));
     }
 
-    return proxyName;
+    return Promise.all(defs).then(()=>{
+        return proxyName;
+    });
 }
 
 function formatDate(date) {
@@ -309,40 +305,34 @@ function getParentPageList(vm) {
     return res;
 }
 
-export async function getPageConfig(pageName, vm, isRemote = false) {
+export function getPageConfig(pageName, vm, isRemote = false) {
     let appConfig = getConfig();
     let pageConfig;
 
     const parentPageList = getParentPageList(vm);
 
     if(isRemote === false){
-        for(const page of parentPageList) {
+        parentPageList.forEach((page)=>{
             if(!pageConfig && page.rawPageConfig && page.rawPageConfig.pages && page.rawPageConfig.pages[pageName]){
                 pageConfig = page.rawPageConfig.pages[pageName];
-                break;
             }
-        }
+        });
 
         if(!pageConfig && appConfig.pages[pageName]){
             pageConfig = appConfig.pages[pageName];
         }
     }
 
-    for(const page of parentPageList) {
+    parentPageList.forEach((page)=>{
         if(!pageConfig && page.rawPageConfig && page.rawPageConfig.remotePages && page.rawPageConfig.remotePages[pageName]){
             isRemote = true;
             pageConfig = page.rawPageConfig.remotePages[pageName];
-            break;
         }
-    }
+    });
 
     if(!pageConfig && appConfig.remotePages[pageName]){
         isRemote = true;
         pageConfig = appConfig.remotePages[pageName];
-    }
-
-    if (isRemote) {
-        pageConfig = await loadRemoteModule(pageConfig);
     }
 
     if(!pageConfig){
@@ -350,5 +340,13 @@ export async function getPageConfig(pageName, vm, isRemote = false) {
         console.error(`页面${pageName}不存在！`);
     }
 
-    return pageConfig;
+    return new Promise((resolve, reject)=>{
+        if (isRemote) {
+            loadRemoteModule(pageConfig).then((config)=>{
+                resolve(config);
+            });
+        } else {
+            resolve(pageConfig);
+        }
+    });
 }

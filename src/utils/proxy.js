@@ -32,21 +32,11 @@ export default function (component) {
                 slots = {},
                 childrenEl = [];
 
-            Object.keys(this.events || {}).forEach(it => {
-                events[it] = this.events[it];
+            Object.keys(this.options || {}).forEach(it => {
+                if (it.startsWith('on') && typeof this.options[it] === 'function') {
+                    events[it.slice(2)] = this.options[it];
+                }
             });
-
-            if (this.options.value !== undefined) {
-                events['input'] = val => {
-                    this.options.value = val;
-                };
-            }
-
-            if (this.options.model !== undefined) {
-                events['input'] = val => {
-                    this.options.model = val;
-                };
-            }
 
             Object.keys(this.slots || {}).forEach(it => {
                 slots[it] = props => {

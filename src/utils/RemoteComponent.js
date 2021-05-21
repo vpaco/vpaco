@@ -7,8 +7,8 @@ export class RemoteComponent {
                 'Access-Control-Allow-Origin': '*'
             }
         })
-            .then(async function (response) {
-                return await response.text();
+            .then(function (response) {
+                return response.text();
             })
             .then(text => {
                 this.runScript('!!' + text);

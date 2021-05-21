@@ -31,5 +31,7 @@ module.exports = {
         loaders: loaders,
     },
 
+    plugins,
+
     devtool: false,
 }
