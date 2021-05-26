@@ -4,6 +4,7 @@
             <template v-if="!comp.hidden">
                 <template v-if="!!comp.componentList">
                     <container-layout
+                        :key="index"
                         v-if="!comp.hidden"
                         class="vp-component-list"
                         :class="getComponentWrapClass(comp)"

@@ -1,13 +1,20 @@
-import { register as _register, setVue, addPage as _addPage } from './config';
+import {
+    register as _register,
+    setVue, addPage as _addPage
+} from './config';
+import {
+    loadRemoteModule as _loadRemoteModule,
+    getComponent as _getComponent
+} from './utils';
 import Page from './components/page';
 import Component from './components/component';
-import {loadRemoteModule as _loadRemoteModule} from './utils/index';
 
 export const VpPage = Page;
 export const VpComponent = Component;
 export const register = _register;
 export const addPage = _addPage;
 export const loadRemoteModule = _loadRemoteModule;
+export const getComponent = _getComponent;
 export const install = function (Vue, opts = {}) {
     Vue.component('VpPage', VpPage);
     Vue.component('VpComponent', VpComponent);
@@ -25,5 +32,6 @@ export default {
     VpPage,
     VpComponent,
     addPage,
-    loadRemoteModule
+    loadRemoteModule,
+    getComponent
 };

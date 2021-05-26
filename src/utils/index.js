@@ -98,22 +98,30 @@ function checkLayoutNameRepeat(names, name) {
     return hasOne;
 }
 
-export function mergeRows(componentList, options, events, slots) {
+export function mergeRows(componentList, options, events, slots, vm) {
+    const Vue = getVue();
     componentList.forEach((component)=>{
         if (component.componentList) {
             mergeRows(component.componentList, options, events, slots);
         } else {
             if (component.name && options[component.name]) {
-                let val = options[component.name];
-                Object.defineProperty(options, component.name, {
-                    get(){
-                        return val;
-                    },
-                    set(newValue){
-                        component.options = newValue;
-                    }
-                });
-                component.options = options[component.name];
+                if(typeOf(options[component.name]) === 'function'){
+                    component.options = options[component.name]()
+                    vm.$watch(options[component.name], (val)=>{
+                        component.options = val
+                    })
+                }else{
+                    let val = options[component.name];
+                    Object.defineProperty(options, component.name, {
+                        get(){
+                            return val;
+                        },
+                        set(newValue){
+                            component.options = newValue;
+                        }
+                    });
+                    component.options = options[component.name];
+                }
             }
 
             if (component.name && slots[component.name]) {
@@ -130,7 +138,9 @@ export function mergeRows(componentList, options, events, slots) {
 }
 
 export function loadComponent(layout, pageConfig, pageName) {
-    return loadComponent_(layout.componentList, pageConfig, pageName);
+    return getRemoteComponents().then(()=>{
+        return loadComponent_(layout.componentList, pageConfig, pageName);
+    });
 }
 
 function loadComponent_(componentList, pageConfig, pageName) {
@@ -162,52 +172,72 @@ function getRemoteComponentUrl(name) {
     return appConfig.remoteComponents[name];
 }
 
+function getRemoteComponents(){
+    const appConfig = getConfig();
+
+    return new Promise((resolve, reject)=>{
+        if(appConfig.remoteComponentsUrlLoading){
+            setInterval(()=>{
+                if(!appConfig.remoteComponentsUrlLoading){
+                    resolve(appConfig.remoteComponents);
+                }
+            }, 30);
+        }else{
+            resolve(appConfig.remoteComponents);
+        }
+    });
+
+}
+
 export function getProxyComponent(name, isRemote, pageConfig, pageName) {
     const Vue = getVue();
     const appConfig = getConfig();
 
-    if (!appConfig.components[name] &&
-        !appConfig.remoteComponents[name] &&
-        !(pageConfig.components && pageConfig.components[name]) &&
-        !(pageConfig.remoteComponents && pageConfig.remoteComponents[name])
-    ) {
-        // eslint-disable-next-line no-console
-        console.error(`组件"${name}"不存在！`);
-    }
-
-    if (!isRemote) {
-        const component = appConfig.components[name] ||  pageConfig && pageConfig.components[name];
-        let proxyName;
-
-        if(pageConfig && pageConfig.components && pageConfig.components[name]){
-            proxyName = pageName + name + '_proxy';
-        }else if(appConfig.components[name]) {
-            proxyName = name + '_proxy';
+    return getRemoteComponents().then((remoteComponents)=>{
+        if (!appConfig.components[name] &&
+            !remoteComponents[name] &&
+            !(pageConfig.components && pageConfig.components[name]) &&
+            !(remoteComponents && remoteComponents[name])
+        ) {
+            // eslint-disable-next-line no-console
+            console.error(`组件"${name}"不存在！`);
         }
+
+        if (!isRemote) {
+            const component = appConfig.components[name] ||  pageConfig && pageConfig.components[name];
+            let proxyName;
+
+            if(pageConfig && pageConfig.components && pageConfig.components[name]){
+                proxyName = pageName + name + '_proxy';
+            }else if(appConfig.components[name]) {
+                proxyName = name + '_proxy';
+            }
+            if (!Vue.component(proxyName)) {
+                Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
+            }
+
+            return Promise.resolve(proxyName);
+        }
+
+        let url = name;
+        let defs = [];
+        if (!_endsWith(url, '.js')) {
+            url = remoteComponents[name] || pageConfig && remoteComponents[name];
+        }
+
+        let proxyName = btoa(url).replace(/\=/g, '') + '_remote_proxy';
+
         if (!Vue.component(proxyName)) {
-            Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
+            defs.push(loadRemoteModule(url).then((component)=>{
+                Vue.component(proxyName, proxy(component));
+            }));
         }
 
-        return Promise.resolve(proxyName);
-    }
-
-    let url = name;
-    let defs = [];
-    if (!_endsWith(url, '.js')) {
-        url = appConfig.remoteComponents[name] || pageConfig && pageConfig.remoteComponents[name];
-    }
-
-    let proxyName = btoa(url).replace(/\=/g, '') + '_remote_proxy';
-
-    if (!Vue.component(proxyName)) {
-        defs.push(loadRemoteModule(url).then((component)=>{
-            Vue.component(proxyName, proxy(component));
-        }));
-    }
-
-    return Promise.all(defs).then(()=>{
-        return proxyName;
+        return Promise.all(defs).then(()=>{
+            return proxyName;
+        });
     });
+
 }
 
 function formatDate(date) {
@@ -272,6 +302,26 @@ export function toString(b) {
         },
         4
     );
+}
+
+export function getComponent (name, isRemote = true) {
+    let appConfig = getConfig();
+
+    return getRemoteComponents().then((remoteComponents)=>{
+        if(isRemote){
+            const url = remoteComponents[name];
+            if(!url){
+                throw new Error('远程组件' + name + '不存在');
+            }
+            return loadRemoteModule(url);
+        }else{
+            const comp = appConfig.components[name];
+            if(!comp){
+                throw new Error('本地组件' + name + '不存在');
+            }
+            return Promise.resolve(appConfig.components[name]);
+        }
+    });
 }
 
 export function loadRemoteModule(url) {

@@ -49,8 +49,12 @@ export function register(config) {
     });
 
     if (globalConfig.remoteComponentsUrl) {
+        globalConfig.remoteComponentsUrlLoading = true;
         return loadRemoteModule(globalConfig.remoteComponentsUrl).then((res)=>{
             globalConfig.remoteComponents = res;
+            globalConfig.remoteComponentsUrlLoading = false;
+        }).catch(()=>{
+            globalConfig.remoteComponentsUrlLoading = false;
         });
     }else{
         return Promise.resolve();

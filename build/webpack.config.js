@@ -9,6 +9,8 @@ module.exports = {
         extensions: ['.js', '.vue']
     },
 
+    mode: 'production',
+
     output: {
         // eslint-disable-next-line no-undef
         path: __dirname + '/../dist/',
@@ -28,7 +30,7 @@ module.exports = {
     },
 
     module: {
-        loaders: loaders,
+        rules: loaders,
     },
 
     plugins,

@@ -41,14 +41,15 @@ export default {
             innerPage: this.name
         };
     },
-
     watch: {
         name: function () {
             this.innerPage = this.name;
         },
-
-        options() {
-            this.innerOptions = this.options || {};
+        options: {
+            deep: true,
+            handler() {
+                this.innerOptions = this.options || {};
+            }
         },
     },
 
