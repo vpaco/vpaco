@@ -117,6 +117,7 @@ export function mergeRows(componentList, options, events, slots, vm) {
                             return val;
                         },
                         set(newValue){
+                            val = newValue;
                             component.options = newValue;
                         }
                     });
@@ -203,17 +204,19 @@ export function getProxyComponent(name, isRemote, pageConfig, pageName) {
             console.error(`组件"${name}"不存在！`);
         }
 
-        if (!isRemote) {
-            const component = appConfig.components[name] ||  pageConfig && pageConfig.components[name];
+        if (!isRemote || (isRemote && remoteComponents && typeof remoteComponents[name] === 'object')) {
+            const components = isRemote ? remoteComponents : appConfig.components;
+            const pageComponents = isRemote ? (pageConfig && pageConfig.remoteComponents) : (pageConfig && pageConfig.components);
+            const component = (pageComponents || components)[name];
             let proxyName;
 
-            if(pageConfig && pageConfig.components && pageConfig.components[name]){
+            if(pageComponents && pageComponents[name]){
                 proxyName = pageName + name + '_proxy';
-            }else if(appConfig.components[name]) {
+            }else if(components  && components[name]) {
                 proxyName = name + '_proxy';
             }
             if (!Vue.component(proxyName)) {
-                Vue.component(proxyName, proxy(component.__esModule ? component.default : component));
+                Vue.component(proxyName, proxy(component.__esModule ? (component.default || component) : component));
             }
 
             return Promise.resolve(proxyName);
@@ -222,7 +225,7 @@ export function getProxyComponent(name, isRemote, pageConfig, pageName) {
         let url = name;
         let defs = [];
         if (!_endsWith(url, '.js')) {
-            url = remoteComponents[name] || pageConfig && remoteComponents[name];
+            url = remoteComponents[name] || pageConfig && pageConfig.remoteComponents[name];
         }
 
         let proxyName = btoa(url).replace(/\=/g, '') + '_remote_proxy';
