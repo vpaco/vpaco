@@ -67,7 +67,12 @@
                     // eslint-disable-next-line no-console
                     console.error(`${key}为页面关键字，请更换名称`);
                 }
-                this[key] = appConfig.extensions[key].bind(this);
+                if(typeof appConfig.extensions[key] === 'function'){
+                    this[key] = appConfig.extensions[key].bind(this);
+                }else{
+                    this[key] = appConfig.extensions[key];
+                }
+
             });
 
             this.reloadPage();
@@ -110,7 +115,7 @@
 
                 if(this.config){
                     this.renderPage(this.config);
-                }else {
+                }else if(this.page){
                     getPageConfig(this.page, this, this.isRemote).then((config)=>{
                         this.renderPage(config);
                     });
@@ -124,6 +129,10 @@
                 }
 
                 let layout = rawPageConfig.layout;
+
+                if(!layout){
+                  return
+                }
 
                 this.rawPageConfig = rawPageConfig;
 
