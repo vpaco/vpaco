@@ -2,7 +2,7 @@
     <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass"/>
 </template>
 <script>
-    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig} from '../utils';
+    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig, createLayout} from '../utils';
     import Container from './container/container';
     import {getConfig} from '../config';
     import isArray from 'isarray';
@@ -136,7 +136,12 @@
 
                 this.rawPageConfig = rawPageConfig;
 
-                layout = deepCopy(layout);
+                if(typeof layout === 'function'){
+                    layout = layout(createLayout);
+                }else {
+                    layout = deepCopy(layout);
+                }
+
                 if (isArray(layout)) {
                     layout = {componentList: layout};
                 } else if (!layout.componentList) {

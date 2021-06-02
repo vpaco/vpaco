@@ -198,7 +198,7 @@ export function getProxyComponent(name, isRemote, pageConfig, pageName) {
         if (!appConfig.components[name] &&
             !remoteComponents[name] &&
             !(pageConfig.components && pageConfig.components[name]) &&
-            !(remoteComponents && remoteComponents[name])
+            !(pageConfig.remoteComponents && pageConfig.remoteComponents[name])
         ) {
             // eslint-disable-next-line no-console
             console.error(`组件"${name}"不存在！`);
@@ -402,4 +402,20 @@ export function getPageConfig(pageName, vm, isRemote = false) {
             resolve(pageConfig);
         }
     });
+}
+
+export function createLayout(ele, config, children){
+    if(ele === 'container'){
+        return {
+            ...config || {},
+            componentList: children
+        }
+    }else if (ele === 'component'){
+        config = {...config.attrs || {}, ...config};
+        const {alias, name, ...others} = config;
+        return {name: alias, component: name, ...others || {}};
+    }else if (ele === 'remoteComponent'){
+        const {alias, name, ...others} = config;
+        return {name: alias, remoteComponent: name, ...others || {}};
+    }
 }
