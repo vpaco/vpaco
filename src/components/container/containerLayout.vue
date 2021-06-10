@@ -45,7 +45,12 @@
                         :vp-is-page-component="true"
                     />
                 </div>
-                <div v-else-if="comp.options && comp.options.render">
+                <div
+                    v-else-if="comp.options && comp.options.render"
+                    class="vp-component-wrap"
+                    :class="getComponentWrapClass(comp)"
+                    :style="comp.style"
+                >
                   <functional :render="comp.options.render"></functional>
                 </div>
             </template>

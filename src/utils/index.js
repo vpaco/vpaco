@@ -327,16 +327,16 @@ export function getComponent (name, isRemote = true) {
     });
 }
 
-export function loadRemoteModule(url) {
+export function loadRemoteModule(url, name = 'default') {
     if (loadedModules[url]) {
-        return Promise.resolve(loadedModules[url]);
+        return Promise.resolve(loadedModules[url][name]);
     }
 
     let rc = new RemoteComponent();
 
     loadedModules[url] = rc.fetch(url).then(component => {
         loadedModules[url] = component;
-        return component;
+        return component[name];
     });
 
     return loadedModules[url];
@@ -383,7 +383,7 @@ export function getPageConfig(pageName, vm, isRemote = false) {
         }
     });
 
-    if(!pageConfig && appConfig.remotePages[pageName]){
+    if(!pageConfig && appConfig.remotePages && appConfig.remotePages[pageName]){
         isRemote = true;
         pageConfig = appConfig.remotePages[pageName];
     }

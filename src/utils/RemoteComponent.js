@@ -12,16 +12,17 @@ export class RemoteComponent {
             })
             .then(text => {
                 this.runScript('!!' + text);
-                return this.default;
+                return this.module && this.module.exports;
             });
     }
 
     runScript(text) {
-        let module = undefined,
-            exports = undefined,
+        let module = {},
+            exports = {},
             globalThis = this,
             self = this;
 
         eval(text);
+        this.module = module
     }
 }

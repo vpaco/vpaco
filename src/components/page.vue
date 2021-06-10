@@ -38,7 +38,7 @@ export default {
         return {
             vpIsPageWrapper: true,
             innerOptions: this.options || {},
-            innerPage: this.name
+            innerPage: this.name,
         };
     },
     watch: {
