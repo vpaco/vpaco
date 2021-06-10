@@ -2,7 +2,7 @@
     <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass"/>
 </template>
 <script>
-    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig, createLayout} from '../utils';
+    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig, createLayout, loadRemoteModule} from '../utils';
     import Container from './container/container';
     import {getConfig} from '../config';
     import isArray from 'isarray';
@@ -32,7 +32,8 @@
                 visible: false,
                 lastPage: null,
                 innerOptions: null,
-                layout: null
+                layout: null,
+                loadRemoteModule,
             };
         },
 
@@ -72,7 +73,6 @@
                 }else{
                     this[key] = appConfig.extensions[key];
                 }
-
             });
 
             this.reloadPage();
@@ -124,6 +124,7 @@
 
             renderPage (rawPageConfig) {
                 const appConfig = getConfig();
+                const self = this;
                 if (this.page && !rawPageConfig) {
                     return;
                 }
@@ -150,13 +151,64 @@
                 this._initLayoutRefs([layout]);
 
                 this._initAncestorRefs();
+                this.refs = {};
 
                 let configCallback = rawPageConfig.config;
-                let config = configCallback ? (()=>{
-                    return configCallback.bind(this)(this);
+                const options = {};
+                let setup, optionsChange, mounted, destroy;
+                const info = {
+                    context: {
+                        options: {...this.options},
+                        router: this.$router,
+                        route: this.$route,
+                        pushPage: this.pushPage,
+                        popPage: this.popPage,
+                        refs: this.refs,
+                        layoutRefs: this.layoutRefs,
+                        loadRemoteModule,
+                        ...appConfig.extensions || {},
+                    },
+                    initState(name, state){
+                        if(arguments.length === 2){
+                            options[name] = state;
+                            return state;
+                        } else if (arguments.length === 1){
+                            const attr = 'autoState';
+                            options[attr] = name;
+                            return name;
+                        }
+                    },
+                    setState(name, state){
+                        if(arguments.length === 2){
+                            Object.keys(state).forEach((it)=>{
+                                options[name][it] = state[it];
+                            });
+                        }else if (arguments.length === 1){
+                            const attr = 'autoState';
+                            Object.keys(name).forEach((it)=>{
+                                options[attr][it] = name[it];
+                            });
+                        }
+                    },
+                    setup(callback){
+                        setup = callback;
+                    },
+                    optionsChange(callback){
+                        optionsChange = callback;
+                    },
+                    mounted(callback){
+                        mounted = callback;
+                    },
+                    destroy(callback){
+                        destroy = callback;
+                    },
+
+                };
+                let methods = configCallback ? (()=>{
+                    return configCallback.bind(this)(info);
                 })() : {};
 
-                let {options, setup, mounted, optionsChange, destroy} = config;
+                let config = {options, methods};
 
                 this.destroy = destroy;
                 this.optionsChange = optionsChange;
@@ -165,7 +217,7 @@
                 let pageConfig = this.merge(layout, config);
                 this.innerPageConfig = pageConfig;
                 this.$nextTick(() => {
-                    this.refs = {};
+
                     // 空页面
                     if (!layout) {
                         return;
