@@ -1,376 +1,420 @@
 <template>
-    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass"/>
+    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId"/>
 </template>
 <script>
-    import {mergeRows, log, deepCopy, loadComponent, toString, getPageConfig, createLayout, loadRemoteModule} from '../utils';
-    import Container from './container/container';
-    import {getConfig} from '../config';
-    import isArray from 'isarray';
+import {
+    mergeRows,
+    log,
+    deepCopy,
+    loadComponent,
+    toString,
+    getPageConfig,
+    createLayout,
+    loadRemoteModule,
+    parseModule,
+    addRenderStack,
+    removeRenderStackItem,
+    getUid
+} from '../utils';
+import Container from './container/container';
+import { getConfig } from '../config';
+import isArray from 'isarray';
 
-    export default {
-        components: {Container},
-        props: {
-            page: {
-                type: String
-            },
-            options: {
-                type: Object
-            },
-            config: {
-                type: Object
-            },
-            isRemote: {
-                type: Boolean
-            },
+export default {
+    components: { Container },
+    props: {
+        page: {
+            type: String
         },
-
-        data: function () {
-            return {
-                vpIsPage: true,
-                pageConfig: null,
-                historyList: [],
-                visible: false,
-                lastPage: null,
-                innerOptions: null,
-                layout: null,
-                loadRemoteModule,
-            };
+        options: {
+            type: Object
         },
-
-        watch: {
-            page: function () {
-                this.reloadPage();
-            },
-
-            config: function(){
-                this.reloadPage();
-            },
-
-            options: {
-                deep: true,
-                handler(val, oldVal) {
-                    this.optionsChange && this.optionsChange(val, oldVal);
-                }
-            }
+        config: {
+            type: Object
         },
+        isRemote: {
+            type: Boolean
+        },
+        parentId: {
+            type: Number
+        }
+    },
 
-        created() {
-            const appConfig = getConfig();
+    data: function() {
+        return {
+            vpIsPage: true,
+            pageConfig: null,
+            historyList: [],
+            visible: false,
+            lastPage: null,
+            innerOptions: null,
+            layout: null,
+            vpId: getUid(),
+            loadRemoteModule
+        };
+    },
 
-            this.refs = {};
-            this.layoutRefs = {};
-            this.ancestorRefs = {};
-
-            const pageKeyword = ['page', 'options', 'events', 'refs', 'layoutRefs', 'ancestorRefs', 'vpIsPage', 'pageConfig', 'historyList', 'visible', 'lastPage', 'innerOptions', 'layout', 'merge', 'reloadPage', '_initAncestorRefs', '_initLayoutRefs', 'emit', 'pushPage', 'popPage', 'getParentPageList']
-
-            Object.keys(appConfig.extensions || {}).forEach((key)=>{
-                if (pageKeyword.includes(key)) {
-                    // eslint-disable-next-line no-console
-                    console.error(`${key}为页面关键字，请更换名称`);
-                }
-                if(typeof appConfig.extensions[key] === 'function'){
-                    this[key] = appConfig.extensions[key].bind(this);
-                }else{
-                    this[key] = appConfig.extensions[key];
-                }
-            });
-
+    watch: {
+        page: function() {
             this.reloadPage();
         },
 
-        methods: {
-            getPageClass(){
-                const pageName = (this.page || (this.config && this.config.name))
-                if(pageName){
-                    return 'vp-page-' + pageName;
-                }else{
-                    return '';
-                }
-            },
-            merge(layout, {slots = {}, events = {}, options = {}, methods = {}}) {
-                if (!layout) {
-                    return null;
-                }
-                Object.keys(methods  || {}).forEach((key)=>{
-                    this[key] = methods[key];
-                });
+        config: function() {
+            this.reloadPage();
+        },
 
-                if (layout.componentList) {
-                    mergeRows(layout.componentList, options, events, slots, this);
-                }
+        options: {
+            deep: true,
+            handler(val, oldVal) {
+                this.optionsChange && this.optionsChange(val, oldVal);
+            }
+        }
+    },
 
-                return layout;
-            },
-            reloadPage() {
-                if (this.lastPage) {
-                    this.destroy && this.destroy();
-                    log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
-                }
+    created() {
+        const appConfig = getConfig();
 
-                this.lastPage = null;
-                if (!this.page && !this.config) {
-                    this.pageConfig = null;
-                    return;
-                }
+        this.refs = {};
+        this.layoutRefs = {};
+        this.ancestorRefs = {};
 
-                if(this.config){
-                    this.renderPage(this.config);
-                }else if(this.page){
-                    getPageConfig(this.page, this, this.isRemote).then((config)=>{
-                        this.renderPage(config);
-                    });
-                }
-            },
+        const pageKeyword = [
+            'page',
+            'options',
+            'events',
+            'refs',
+            'layoutRefs',
+            'ancestorRefs',
+            'vpIsPage',
+            'pageConfig',
+            'historyList',
+            'visible',
+            'lastPage',
+            'innerOptions',
+            'layout',
+            'merge',
+            'reloadPage',
+            '_initAncestorRefs',
+            '_initLayoutRefs',
+            'emit',
+            'pushPage',
+            'popPage',
+            'getParentPageList'
+        ];
 
-            renderPage (rawPageConfig) {
-                const appConfig = getConfig();
-                const self = this;
-                if (this.page && !rawPageConfig) {
-                    return;
-                }
+        Object.keys(appConfig.extensions || {}).forEach(key => {
+            if (pageKeyword.includes(key)) {
+                // eslint-disable-next-line no-console
+                console.error(`${key}为页面关键字，请更换名称`);
+            }
+        });
 
-                let layout = rawPageConfig.layout;
+        addRenderStack({
+            id: this.vpId,
+            pid: this.parentId,
+            type: 'page',
+            instance: this,
+            name: this.page
+        });
 
-                if(!layout){
-                  return
-                }
+        this.reloadPage();
+    },
 
-                this.rawPageConfig = rawPageConfig;
+    methods: {
+        getPageClass() {
+            const pageName = this.page || (this.config && this.config.name);
+            if (pageName) {
+                return 'vp-page-' + pageName;
+            } else {
+                return '';
+            }
+        },
+        merge(layout, { slots = {}, events = {}, options = {}, methods = {} }) {
+            if (!layout) {
+                return null;
+            }
+            Object.keys(methods || {}).forEach(key => {
+                this[key] = methods[key];
+            });
 
-                if(typeof layout === 'function'){
-                    layout = layout(createLayout);
-                }else {
-                    layout = deepCopy(layout);
-                }
+            if (layout.componentList) {
+                mergeRows(layout.componentList, options, events, slots, this);
+            }
 
-                if (isArray(layout)) {
-                    layout = {componentList: layout};
-                } else if (!layout.componentList) {
-                    layout = {componentList: [layout]};
-                }
-                this._initLayoutRefs([layout]);
+            return layout;
+        },
+        reloadPage() {
+            if (this.lastPage) {
+                this.destroy && this.destroy();
+                log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
+            }
 
-                this._initAncestorRefs();
-                this.refs = {};
-
-                let configCallback = rawPageConfig.config;
-                const options = {};
-                let setup, optionsChange, mounted, destroy;
-                const info = {
-                    context: {
-                        options: {...this.options},
-                        router: this.$router,
-                        route: this.$route,
-                        pushPage: this.pushPage,
-                        popPage: this.popPage,
-                        refs: this.refs,
-                        layoutRefs: this.layoutRefs,
-                        loadRemoteModule,
-                        ...appConfig.extensions || {},
-                    },
-                    initState(name, state){
-                        if(arguments.length === 2){
-                            options[name] = state;
-                            return state;
-                        } else if (arguments.length === 1){
-                            const attr = 'autoState';
-                            options[attr] = name;
-                            return name;
-                        }
-                    },
-                    setState(name, state){
-                        if(arguments.length === 2){
-                            Object.keys(state).forEach((it)=>{
-                                options[name][it] = state[it];
-                            });
-                        }else if (arguments.length === 1){
-                            const attr = 'autoState';
-                            Object.keys(name).forEach((it)=>{
-                                options[attr][it] = name[it];
-                            });
-                        }
-                    },
-                    setup(callback){
-                        setup = callback;
-                    },
-                    optionsChange(callback){
-                        optionsChange = callback;
-                    },
-                    mounted(callback){
-                        mounted = callback;
-                    },
-                    destroy(callback){
-                        destroy = callback;
-                    },
-
-                };
-                let methods = configCallback ? (()=>{
-                    return configCallback.bind(this)(info);
-                })() : {};
-
-                let config = {options, methods};
-
-                this.destroy = destroy;
-                this.optionsChange = optionsChange;
+            this.lastPage = null;
+            if (!this.page && !this.config) {
                 this.pageConfig = null;
-                this.visible = false;
-                let pageConfig = this.merge(layout, config);
-                this.innerPageConfig = pageConfig;
-                this.$nextTick(() => {
+                return;
+            }
 
-                    // 空页面
-                    if (!layout) {
-                        return;
+            if (this.config) {
+                this.renderPage(this.config);
+            } else if (this.page) {
+                getPageConfig(this.page, this, this.isRemote).then(config => {
+                    this.renderPage(config);
+                });
+            }
+        },
+
+        renderPage(rawPageConfig) {
+            const appConfig = getConfig();
+            const self = this;
+            if (this.page && !rawPageConfig) {
+                return;
+            }
+
+            let layout = rawPageConfig.layout;
+
+            if (!layout) {
+                return;
+            }
+
+            this.rawPageConfig = rawPageConfig;
+
+            if (typeof layout === 'function') {
+                layout = layout(createLayout);
+            } else {
+                layout = deepCopy(layout);
+            }
+
+            if (isArray(layout)) {
+                layout = { componentList: layout };
+            } else if (!layout.componentList) {
+                layout = { componentList: [layout] };
+            }
+            this._initLayoutRefs([layout]);
+
+            this._initAncestorRefs();
+            this.refs = {};
+
+            let configCallback = rawPageConfig.config;
+            const options = {};
+            let setup, optionsChange, mounted, destroy;
+            const info = {
+                context: {
+                    options: { ...this.options },
+                    router: this.$router,
+                    route: this.$route,
+                    pushPage: this.pushPage,
+                    popPage: this.popPage,
+                    refs: this.refs,
+                    layoutRefs: this.layoutRefs,
+                    loadRemoteModule,
+                    parseModule,
+                    ...(appConfig.extensions || {})
+                },
+                initState(name, state) {
+                    if (arguments.length === 2) {
+                        options[name] = state;
+                        return state;
+                    } else if (arguments.length === 1) {
+                        const attr = 'autoState';
+                        options[attr] = name;
+                        return name;
                     }
-                    // 加载组件
-                    loadComponent(layout, rawPageConfig, this.page).then(() => {
-                        this.$emit('on-component-ready');
+                },
+                setState(name, state) {
+                    if (arguments.length === 2) {
+                        Object.keys(state).forEach(it => {
+                            options[name][it] = state[it];
+                        });
+                    } else if (arguments.length === 1) {
+                        const attr = 'autoState';
+                        Object.keys(name).forEach(it => {
+                            options[attr][it] = name[it];
+                        });
+                    }
+                },
+                setup(callback) {
+                    setup = callback;
+                },
+                optionsChange(callback) {
+                    optionsChange = callback;
+                },
+                mounted(callback) {
+                    mounted = callback;
+                },
+                destroy(callback) {
+                    destroy = callback;
+                }
+            };
+            let methods = configCallback
+                ? (() => {
+                      return configCallback.bind(this)(info);
+                  })()
+                : {};
 
-                        const showPage = () => {
-                            let logOptions = null;
+            let config = { options, methods };
+
+            this.destroy = destroy;
+            this.optionsChange = optionsChange;
+            this.pageConfig = null;
+            this.visible = false;
+            let pageConfig = this.merge(layout, config);
+            this.innerPageConfig = pageConfig;
+            this.$nextTick(() => {
+                // 空页面
+                if (!layout) {
+                    return;
+                }
+                // 加载组件
+                loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
+                    this.$emit('on-component-ready');
+
+                    const showPage = () => {
+                        let logOptions = null;
+                        if (appConfig.debug) {
+                            logOptions = deepCopy(this.options) || {};
+                        }
+                        if (setup) {
                             if (appConfig.debug) {
-                                logOptions = deepCopy(this.options) || {};
+                                log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                             }
-                            if (setup) {
-                                if (appConfig.debug) {
-                                    log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                }
-                                setup(() => {
-                                    this.visible = true;
-                                    this.pageConfig = pageConfig;
-                                    this.innerOptions = options;
-                                    this.lastPage = this.page;
-                                    if (appConfig.debug) {
-                                        log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                    }
-                                    this.$nextTick(() => {
-                                        this.$parent.$emit('on-rendered');
-                                        this._page_rendered = true;
-                                        mounted && mounted();
-                                    });
-                                });
-                            } else {
+                            setup(() => {
                                 this.visible = true;
                                 this.pageConfig = pageConfig;
                                 this.innerOptions = options;
                                 this.lastPage = this.page;
-                                this.$nextTick(() => {
-                                    this._page_rendered = true;
-                                    this.$parent.$emit('on-rendered');
-                                });
                                 if (appConfig.debug) {
                                     log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                                 }
-                            }
-                        };
-
-                        if (appConfig.beforePageEnter) {
-                            if (appConfig.debug) {
-                                log.debug(`[page before enter] > pageName: ${this.page}`, true);
-                            }
-                            appConfig.beforePageEnter(
-                                {
-                                    pageName: this.page,
-                                    options: options
-                                },
-                                () => {
-                                    showPage();
-                                }
-                            );
+                                this.$nextTick(() => {
+                                    this.$parent.$emit('on-rendered');
+                                    this._page_rendered = true;
+                                    mounted && mounted();
+                                });
+                            });
                         } else {
-                            showPage();
+                            this.visible = true;
+                            this.pageConfig = pageConfig;
+                            this.innerOptions = options;
+                            this.lastPage = this.page;
+                            this.$nextTick(() => {
+                                this._page_rendered = true;
+                                this.$parent.$emit('on-rendered');
+                            });
+                            if (appConfig.debug) {
+                                log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                            }
                         }
-                    });
-                });
-            },
+                    };
 
-            _initAncestorRefs() {
-                let ancestorPageList = this.getParentPageList();
-
-                ancestorPageList.forEach((it) => {
-                    this.ancestorRefs[it.page] = it;
-                });
-            },
-
-            _initLayoutRefs(list) {
-                list.forEach((it)=>{
-                    if (it.name) {
-                        this.layoutRefs[it.name] = it;
-                    }
-                    if (it.componentList) {
-                        this._initLayoutRefs(it.componentList);
+                    if (appConfig.beforePageEnter) {
+                        if (appConfig.debug) {
+                            log.debug(`[page before enter] > pageName: ${this.page}`, true);
+                        }
+                        appConfig.beforePageEnter(
+                            {
+                                pageName: this.page,
+                                options: options
+                            },
+                            () => {
+                                showPage();
+                            }
+                        );
+                    } else {
+                        showPage();
                     }
                 });
-            },
+            });
+        },
 
-            emit(a, b, c, d, e) {
-                this.$parent.$emit(a, b, c, d, e);
-            },
+        _initAncestorRefs() {
+            let ancestorPageList = this.getParentPageList();
 
-            pushPage(page, options) {
-                if (page === -1) {
-                    const last = this.historyList.pop();
+            ancestorPageList.forEach(it => {
+                this.ancestorRefs[it.page] = it;
+            });
+        },
 
-                    if (!last) {
-                        return -1;
-                    }
-
-                    page = last.page;
-                    options = last.options;
-                } else {
-                    this.historyList.push({page: this.page, options: this.options});
+        _initLayoutRefs(list) {
+            list.forEach(it => {
+                if (it.name) {
+                    this.layoutRefs[it.name] = it;
                 }
+                if (it.componentList) {
+                    this._initLayoutRefs(it.componentList);
+                }
+            });
+        },
 
-                this.$emit('update:page', '');
+        emit(a, b, c, d, e) {
+            this.$parent.$emit(a, b, c, d, e);
+        },
 
-                this.$nextTick(() => {
-                    this.$emit('update:options', options);
-                    this.$nextTick(() => {
-                        this.$emit('update:page', page);
-                    });
-                });
-            },
-
-            popPage() {
+        pushPage(page, options) {
+            if (page === -1) {
                 const last = this.historyList.pop();
 
                 if (!last) {
                     return -1;
                 }
 
-                const page = last.page;
-                const options = last.options;
+                page = last.page;
+                options = last.options;
+            } else {
+                this.historyList.push({ page: this.page, options: this.options });
+            }
 
-                this.$emit('update:page', '');
+            this.$emit('update:page', '');
 
+            this.$nextTick(() => {
+                this.$emit('update:options', options);
                 this.$nextTick(() => {
-                    this.$emit('update:options', options);
                     this.$emit('update:page', page);
                 });
-            },
-
-            getParentPageList() {
-                let res = [];
-                let parent = this;
-
-                do {
-                    if (parent.vpIsPage) {
-                        res.push(parent);
-                        parent = parent.$parent;
-                    } else {
-                        parent = parent.$parent;
-                    }
-                } while (parent && parent.$parent);
-
-                return res;
-            }
+            });
         },
 
-        destroyed() {
-            if (this.lastPage) {
-                this.destroy && this.destroy();
-                log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
+        popPage() {
+            const last = this.historyList.pop();
+
+            if (!last) {
+                return -1;
             }
+
+            const page = last.page;
+            const options = last.options;
+
+            this.$emit('update:page', '');
+
+            this.$nextTick(() => {
+                this.$emit('update:options', options);
+                this.$emit('update:page', page);
+            });
+        },
+
+        getParentPageList() {
+            let res = [];
+            let parent = this;
+
+            do {
+                if (parent.vpIsPage) {
+                    res.push(parent);
+                    parent = parent.$parent;
+                } else {
+                    parent = parent.$parent;
+                }
+            } while (parent && parent.$parent);
+
+            return res;
         }
-    };
+    },
+
+    destroyed() {
+        if (this.lastPage) {
+            this.destroy && this.destroy();
+            log.debug(`[page destroy] > pageName: ${this.lastPage}`, true);
+        }
+        removeRenderStackItem(this.vpId);
+    }
+};
 </script>

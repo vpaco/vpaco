@@ -11,6 +11,7 @@
                         :data-comp-id="comp.id"
                         :refs="refs"
                         :style="comp.style"
+                        :vpId="vpId"
                         :componentList="comp.componentList"
                     />
                 </template>
@@ -27,6 +28,7 @@
                         :is="comp.component"
                         :options="comp.options || {}"
                         :slots="comp.slots || {}"
+                        :parentId="vpId"
                         :vp-is-page-component="true"
                         :vp-page-component-name="comp.name"
                         :remote-component="!!comp.remoteComponent"
@@ -39,6 +41,7 @@
                         :name="comp.page || comp.remotePage"
                         :options="comp.options || {}"
                         :isRemote="!!comp.remotePage"
+                        :parentId="vpId"
                         :class="getComponentContentStyle(comp)"
                         :vp-page-component-name="comp.name"
                         ref="page"
@@ -51,19 +54,20 @@
                     :class="getComponentWrapClass(comp)"
                     :style="comp.style"
                 >
-                  <functional :render="comp.options.render"></functional>
+                  <renderComponent :render="comp.options.render" :parent-id="vpId"></renderComponent>
                 </div>
             </template>
         </template>
     </div>
 </template>
 <script>
-import functional from '../../utils/functional';
+import renderComponent from './renderComponent';
 export default {
-    components: {functional},
+    components: {renderComponent},
     props: {
         componentList: Array,
-        refs: Object
+        refs: Object,
+        vpId: Number
     },
     name: 'containerLayout',
 

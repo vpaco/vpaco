@@ -4,6 +4,7 @@ import {
 } from './config';
 import {
     loadRemoteModule as _loadRemoteModule,
+    parseModule as _parseModule,
     getComponent as _getComponent
 } from './utils';
 import Page from './components/page';
@@ -14,6 +15,7 @@ export const VpComponent = Component;
 export const register = _register;
 export const addPage = _addPage;
 export const loadRemoteModule = _loadRemoteModule;
+export const parseModule = _parseModule;
 export const getComponent = _getComponent;
 export const install = function (Vue, opts = {}) {
     Vue.component('VpPage', VpPage);
@@ -33,5 +35,6 @@ export default {
     VpComponent,
     addPage,
     loadRemoteModule,
+    parseModule,
     getComponent
 };

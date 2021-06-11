@@ -5,7 +5,9 @@
         :isRemote="isRemote"
         ref="page"
         :config="config"
-        @on-component-ready="remoteLoaded" />
+        :parent-id="pid"
+        @on-component-ready="remoteLoaded"
+    />
 </template>
 <script>
 import pageInner from './pageInner';
@@ -31,6 +33,9 @@ export default {
         },
         vpPageComponentName: {
             type: String
+        },
+        parentId: {
+            type: Number
         }
     },
 
@@ -39,10 +44,29 @@ export default {
             vpIsPageWrapper: true,
             innerOptions: this.options || {},
             innerPage: this.name,
+            pid: this.parentId
         };
     },
+    created() {
+        if (this.pid === undefined) {
+            let parent = this.$parent;
+            do {
+                if (parent.vpId) {
+                    break;
+                } else {
+                    parent = parent.$parent;
+                }
+            } while (parent);
+
+            if (parent) {
+                this.pid = parent.vpId;
+            } else {
+                this.pid = 0;
+            }
+        }
+    },
     watch: {
-        name: function () {
+        name: function() {
             this.innerPage = this.name;
         },
         options: {
@@ -50,7 +74,7 @@ export default {
             handler() {
                 this.innerOptions = this.options || {};
             }
-        },
+        }
     },
 
     methods: {

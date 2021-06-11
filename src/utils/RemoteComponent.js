@@ -16,6 +16,11 @@ export class RemoteComponent {
             });
     }
 
+    parse(moduleContent){
+        this.runScript('!!' + moduleContent);
+        return this.module && this.module.exports;
+    }
+
     runScript(text) {
         let module = {},
             exports = {},

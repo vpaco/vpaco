@@ -1,11 +1,15 @@
 import { getVue } from '../config';
+import {addRenderStack, getUid, removeRenderStackItem} from './index';
 
-export default function (component) {
+export default function(component, name) {
     const Vue = getVue();
     return Vue.extend({
         props: {
             options: {
                 type: Object
+            },
+            parentId: {
+                type: Number
             },
             events: {
                 type: Object
@@ -23,8 +27,28 @@ export default function (component) {
         },
         data() {
             return {
+                vpId: getUid(),
+                pid: this.parentId,
                 vpComponentWrapper: true
             };
+        },
+        created() {
+            if (this.pid === undefined) {
+                let parent = this.$parent;
+                do {
+                    if (parent.vpId) {
+                        break;
+                    } else {
+                        parent = parent.$parent;
+                    }
+                } while (parent);
+
+                if (parent) {
+                    this.pid = parent.vpId;
+                } else {
+                    this.pid = 0;
+                }
+            }
         },
         render(h) {
             const Component = component;
@@ -48,32 +72,38 @@ export default function (component) {
                 }
 
                 childrenEl.push(
-                    h('div', {
-                        slot: it
-                    })
+                  h('div', {
+                      slot: it
+                  })
                 );
             });
 
-            return h(
-                Component,
-                {
-                    props: this.options || {},
-                    scopedSlots: slots,
-                    on: events,
-                    style: this.options.$style,
-                    class: this.options.$class
-                },
-                childrenEl
-            );
+            return h(Component, {
+                props: this.options || {},
+                scopedSlots: slots,
+                on: events,
+                style: this.options.$style,
+                class: this.options.$class
+            }, childrenEl);
         },
 
         mounted() {
             let comp = this.$children[0];
+            addRenderStack({
+                id: this.vpId,
+                pid: this.pid,
+                type: 'component',
+                instance: comp,
+                name
+            });
             if (component.methods) {
                 Object.keys(component.methods).forEach(it => {
                     this[it] = component.methods[it].bind(comp);
                 });
             }
+        },
+        destroyed() {
+            removeRenderStackItem(this.vpId);
         }
     });
 }

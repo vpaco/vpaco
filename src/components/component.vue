@@ -10,53 +10,83 @@
     ></component>
 </template>
 <script>
-    import {getProxyComponent, isRemoteComponent} from '../utils';
+import { addRenderStack, getProxyComponent, getUid, isRemoteComponent, removeRenderStackItem } from '../utils';
 
-    export default {
-        props: {
-            options: {
-                type: Object,
-                default() {
-                    return {};
-                }
-            },
-            slots: {
-                type: Object
-            },
-            name: {
-                type: String
+export default {
+    props: {
+        options: {
+            type: Object,
+            default() {
+                return {};
             }
         },
-
-        data: function () {
-            return {
-                innerComponent: '',
-                vpIsComponent: true,
-                isRemote: false
-            };
+        slots: {
+            type: Object
         },
+        name: {
+            type: String
+        }
+    },
 
-        watch: {
-            name() {
-                this.isRemote = isRemoteComponent(this.name)
-                getProxyComponent(this.name, this.isRemote).then(name => {
-                    this.innerComponent = name;
-                });
-            },
-        },
+    data: function() {
+        return {
+            innerComponent: '',
+            vpIsComponent: true,
+            isRemote: false,
+            vpId: getUid(),
+            pid: undefined
+        };
+    },
 
-        created() {
-            this.isRemote = isRemoteComponent(this.name)
-            getProxyComponent(this.name, this.isRemote).then(name => {
+    watch: {
+        name() {
+            this.isRemote = isRemoteComponent(this.name);
+            getProxyComponent(this.name, this.isRemote, this.vpId).then(name => {
+                this.innerComponent = name;
+            });
+        }
+    },
+
+    created() {
+        if (this.pid === undefined) {
+            let parent = this.$parent;
+            do {
+                if (parent.vpId) {
+                    break;
+                } else {
+                    parent = parent.$parent;
+                }
+            } while (parent);
+
+            if (parent) {
+                this.pid = parent.vpId;
+            } else {
+                this.pid = 0;
+            }
+        }
+        addRenderStack({
+            id: this.vpId,
+            pid: this.pid,
+            type: 'component',
+            instance: this,
+            name: this.name
+        });
+        this.isRemote = isRemoteComponent(this.name);
+        this.$nextTick(() => {
+            getProxyComponent(this.name, this.isRemote, this.vpId).then(name => {
                 this.innerComponent = name;
                 this.$emit('on-component-ready');
             });
-        },
+        });
+    },
 
-        methods: {
-            getInstance() {
-                return this.$refs.component;
-            }
+    methods: {
+        getInstance() {
+            return this.$refs.component;
         }
-    };
+    },
+    destroyed() {
+        removeRenderStackItem(this.vpId);
+    }
+};
 </script>
