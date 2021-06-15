@@ -66,7 +66,14 @@ export default {
         options: {
             deep: true,
             handler(val, oldVal) {
-                this.optionsChange && this.optionsChange(val, oldVal);
+                if(this.optionsChange){
+                    this.optionsChange(val, oldVal);
+                }else{
+                    if(this.destroy){
+                        this.destroy();
+                    }
+                    this.renderPage(this.rawPageConfig);
+                }
             }
         }
     },
@@ -158,7 +165,7 @@ export default {
             if (this.config) {
                 this.renderPage(this.config);
             } else if (this.page) {
-                getPageConfig(this.page, this, this.isRemote).then(config => {
+                getPageConfig(this.page, this.vpId, this.isRemote).then(config => {
                     this.renderPage(config);
                 });
             }
@@ -166,7 +173,13 @@ export default {
 
         renderPage(rawPageConfig) {
             const appConfig = getConfig();
+            const isReload = rawPageConfig === this.rawPageConfig;
             const self = this;
+            if(!isReload){
+                this.pageConfig = null;
+                this.visible = false;
+                this.refs = {};
+            }
             if (this.page && !rawPageConfig) {
                 return;
             }
@@ -193,7 +206,7 @@ export default {
             this._initLayoutRefs([layout]);
 
             this._initAncestorRefs();
-            this.refs = {};
+
 
             let configCallback = rawPageConfig.config;
             const options = {};
@@ -256,8 +269,7 @@ export default {
 
             this.destroy = destroy;
             this.optionsChange = optionsChange;
-            this.pageConfig = null;
-            this.visible = false;
+
             let pageConfig = this.merge(layout, config);
             this.innerPageConfig = pageConfig;
             this.$nextTick(() => {
