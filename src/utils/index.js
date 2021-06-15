@@ -21,6 +21,9 @@ function getStackComponentById(id){
     if(instance  && instance.vpIsComponent){
         instance = instance.$refs.component;
     }
+    if(instance && instance.vpComponentWrapper){
+        instance = instance.$children[0];
+    }
     return instance;
 }
 
@@ -185,7 +188,7 @@ function loadComponent_(componentList, pageConfig, pageName, vpId) {
             defs.push(loadComponent_(component.componentList, pageConfig, pageName, vpId));
         } else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
-            defs.push(getProxyComponent(component.componentName, !!component.remoteComponent, vpId).then(proxyName => {
+            defs.push(getProxyComponent(component.componentName, component.isRemote, vpId).then(proxyName => {
                 component.component = proxyName;
             }));
         }
@@ -240,11 +243,13 @@ function getResource(name, isRemote, type, id, level){
 
     if(item.type === 'page'){
         const pageInstance = getStackComponentById(id);
-        const config = pageInstance.rawPageConfig;
-        if(isRemote && config[typeMap[type][1]] &&  config[remote][name]){
+        const config = pageInstance.rawPageConfig || {};
+        if(isRemote && config[remote] &&  config[remote][name]){
             result = {resource: config[remote][name], from: 'remote', scoped: true, page: item.name};
         }else if(!isRemote && config[local] &&  config[local][name]){
             result = {resource: config[local][name], from: 'local', scoped: true, page: item.name};
+        }else if(!isRemote && config[remote] &&  config[remote][name]){
+            result = {resource: config[remote][name], from: 'remote', scoped: true, page: item.name};
         }else {
             result = getResource(name, isRemote, type,  item.pid, ++level);
         }
@@ -257,6 +262,8 @@ function getResource(name, isRemote, type, id, level){
             result = {resource: appConfig[remote][name], from: 'remote', scoped: false};
         }else if(!isRemote && appConfig[local] && appConfig[local][name]){
             result = {resource: appConfig[local][name], from: 'local', scoped: false};
+        }else if(!isRemote && appConfig[remote] && appConfig[remote][name]){
+            result = {resource: appConfig[remote][name], from: 'remote', scoped: false};
         }
     }
 
@@ -413,50 +420,23 @@ function getParentPageList(vm) {
     return res;
 }
 
-export function getPageConfig(pageName, vm, isRemote = false) {
+export function getPageConfig(pageName, vpId, isRemote) {
     let appConfig = getConfig();
     let pageConfig;
 
-    const parentPageList = getParentPageList(vm);
+    const {resource, from, scoped, page} = getResource(pageName, isRemote, 'page', vpId, 0);
 
-    if(isRemote === false){
-        parentPageList.forEach((page)=>{
-            if(!pageConfig && page.rawPageConfig && page.rawPageConfig.pages && page.rawPageConfig.pages[pageName]){
-                pageConfig = page.rawPageConfig.pages[pageName];
-            }
-        });
-
-        if(!pageConfig && appConfig.pages[pageName]){
-            pageConfig = appConfig.pages[pageName];
-        }
+    if(!resource){
+        throw Error(`页面"${pageName}"不存在！`);
     }
 
-    parentPageList.forEach((page)=>{
-        if(!pageConfig && page.rawPageConfig && page.rawPageConfig.remotePages && page.rawPageConfig.remotePages[pageName]){
-            isRemote = true;
-            pageConfig = page.rawPageConfig.remotePages[pageName];
-        }
-    });
-
-    if(!pageConfig && appConfig.remotePages && appConfig.remotePages[pageName]){
-        isRemote = true;
-        pageConfig = appConfig.remotePages[pageName];
+    if(typeof resource === 'object'){
+        return Promise.resolve(resource);
     }
 
-    if(!pageConfig){
-        // eslint-disable-next-line no-console
-        console.error(`页面${pageName}不存在！`);
+    if(typeof resource === 'string'){
+        return loadRemoteModule(resource);
     }
-
-    return new Promise((resolve, reject)=>{
-        if (isRemote) {
-            loadRemoteModule(pageConfig).then((config)=>{
-                resolve(config);
-            });
-        } else {
-            resolve(pageConfig);
-        }
-    });
 }
 
 export function createLayout(ele, config, children){

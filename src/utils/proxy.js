@@ -49,6 +49,13 @@ export default function(component, name) {
                     this.pid = 0;
                 }
             }
+            addRenderStack({
+                id: this.vpId,
+                pid: this.pid,
+                type: 'component',
+                instance: this,
+                name
+            });
         },
         render(h) {
             const Component = component;
@@ -89,13 +96,6 @@ export default function(component, name) {
 
         mounted() {
             let comp = this.$children[0];
-            addRenderStack({
-                id: this.vpId,
-                pid: this.pid,
-                type: 'component',
-                instance: comp,
-                name
-            });
             if (component.methods) {
                 Object.keys(component.methods).forEach(it => {
                     this[it] = component.methods[it].bind(comp);
