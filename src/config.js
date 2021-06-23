@@ -48,13 +48,15 @@ export function register(config) {
         }
     });
 
-    if (globalConfig.remoteComponentsUrl) {
-        globalConfig.remoteComponentsUrlLoading = true;
-        return loadRemoteModule(globalConfig.remoteComponentsUrl).then((res)=>{
-            globalConfig.remoteComponents = res;
-            globalConfig.remoteComponentsUrlLoading = false;
+    if (globalConfig.remoteResourceUrl) {
+        globalConfig.remoteUrlLoading = true;
+        return loadRemoteModule(globalConfig.remoteResourceUrl).then((res)=>{
+            globalConfig.remoteComponents = res.components;
+            globalConfig.remotePages = res.pages;
+            globalConfig.remoteUrlLoading = false;
+            return res;
         }).catch(()=>{
-            globalConfig.remoteComponentsUrlLoading = false;
+            globalConfig.remoteUrlLoading = false;
         });
     }else{
         return Promise.resolve();

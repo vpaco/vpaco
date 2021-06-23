@@ -1,6 +1,5 @@
 import {getConfig, getVue} from '../config';
 import proxy from './proxy';
-import _endsWith from 'lodash/endsWith';
 import {RemoteComponent} from './RemoteComponent';
 
 let uid = 1000;
@@ -213,9 +212,9 @@ function getRemoteComponents(){
     const appConfig = getConfig();
 
     return new Promise((resolve, reject)=>{
-        if(appConfig.remoteComponentsUrlLoading){
+        if(appConfig.remoteUrlLoading){
             setInterval(()=>{
-                if(!appConfig.remoteComponentsUrlLoading){
+                if(!appConfig.remoteUrlLoading){
                     resolve(appConfig.remoteComponents);
                 }
             }, 30);
@@ -386,14 +385,15 @@ export function getComponent (name, isRemote = true) {
 
 export function loadRemoteModule(url, name = 'default') {
     if (loadedModules[url]) {
-        return Promise.resolve(loadedModules[url][name]);
+        return Promise.resolve(loadedModules[url]);
     }
 
     let rc = new RemoteComponent();
 
     loadedModules[url] = rc.fetch(url).then(component => {
-        loadedModules[url] = component;
-        return component.__esModule ? component[name] : component;
+        const res = component.__esModule ? component[name] : component;
+        loadedModules[url] = res;
+        return res;
     });
 
     return loadedModules[url];
