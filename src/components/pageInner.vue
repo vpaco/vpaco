@@ -174,7 +174,6 @@ export default {
         renderPage(rawPageConfig) {
             const appConfig = getConfig();
             const isReload = rawPageConfig === this.rawPageConfig;
-            const self = this;
             if(!isReload){
                 this.pageConfig = null;
                 this.visible = false;
@@ -211,9 +210,10 @@ export default {
             let configCallback = rawPageConfig.config;
             const options = {};
             let setup, optionsChange, mounted, destroy;
+            const route = this.$route || {};
             const info = {
                 context: {
-                    options: { ...this.options },
+                    options: { $params: route.params, $query: route.query, ...this.options },
                     router: this.$router,
                     route: this.$route,
                     pushPage: this.pushPage,
