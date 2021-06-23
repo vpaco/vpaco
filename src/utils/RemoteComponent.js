@@ -1,5 +1,7 @@
+let index = 0;
 export class RemoteComponent {
     fetch(url) {
+        this.url = url;
         return fetch(url, {
             mode: 'cors',
             method: 'GET',
@@ -21,13 +23,27 @@ export class RemoteComponent {
         return this.module && this.module.exports;
     }
 
+    removeScript (scriptElement) {
+        document.body.removeChild(scriptElement);
+    }
+
     runScript(text) {
         let module = {},
-            exports = {},
-            globalThis = this,
-            self = this;
+            name =  `vpFetch${index}`;
+        index++;
 
-        eval(text);
-        this.module = module
+        let scriptElement = document.createElement('script');
+        scriptElement.innerHTML = `
+            (function(){
+            document.currentScript.src = '${this.url}';
+                let module = {}, exports = {};
+                ${text}
+                window['${name}'] = module;
+            })()
+        `;
+        document.body.appendChild(scriptElement);
+        this.removeScript(scriptElement);
+        this.module = window[name];
+        delete window[name];
     }
 }
