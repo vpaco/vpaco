@@ -4,7 +4,7 @@ let globalConfig = {
     components: {},
     remoteComponents: {},
     pages: {},
-    extendsions: {}
+    extensions: {}
 };
 
 let Vue = null;
@@ -54,11 +54,33 @@ export function register(config) {
             globalConfig.remoteComponents = res.components;
             globalConfig.remotePages = res.pages;
             globalConfig.remoteUrlLoading = false;
-            return res;
+
+            if(res.extensions){
+                return loadRemoteModule(res.components[res.extensions]).then((extensions)=>{
+                    globalConfig.extensions = {
+                        ...extensions,
+                        ...globalConfig.extensions || {}
+                    };
+                    return res;
+                });
+            }else{
+                return res;
+            }
         }).catch(()=>{
             globalConfig.remoteUrlLoading = false;
         });
-    }else{
+    }else if(globalConfig.remoteResource){
+        globalConfig.remoteComponents = globalConfig.remoteResource.components;
+        globalConfig.remotePages = globalConfig.remoteResource.pages;
+
+        if(globalConfig.remoteResource.extensions){
+            globalConfig.extensions = {
+                ...globalConfig.remoteResource.extensions,
+                ...globalConfig.extensions || {}
+            };
+        }
+        return Promise.resolve();
+    } else {
         return Promise.resolve();
     }
 }

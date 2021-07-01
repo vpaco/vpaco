@@ -14,7 +14,8 @@ import {
     parseModule,
     addRenderStack,
     removeRenderStackItem,
-    getUid
+    getUid,
+    recursive
 } from '../utils';
 import Container from './container/container';
 import { getConfig } from '../config';
@@ -174,6 +175,7 @@ export default {
         renderPage(rawPageConfig) {
             const appConfig = getConfig();
             const isReload = rawPageConfig === this.rawPageConfig;
+            const self = this;
             if(!isReload){
                 this.pageConfig = null;
                 this.visible = false;
@@ -184,8 +186,9 @@ export default {
             }
 
             let layout = rawPageConfig.layout;
+            let resourceDefinition = rawPageConfig.resourceDefinition || {};
 
-            if (!layout) {
+            if (!layout && !resourceDefinition) {
                 return;
             }
 
@@ -193,6 +196,8 @@ export default {
 
             if (typeof layout === 'function') {
                 layout = layout(createLayout);
+            } else if (!layout){
+                layout = [];
             } else {
                 layout = deepCopy(layout);
             }
@@ -202,10 +207,10 @@ export default {
             } else if (!layout.componentList) {
                 layout = { componentList: [layout] };
             }
+            this.resourceDefinitionMergeToLayout([layout], resourceDefinition);
             this._initLayoutRefs([layout]);
 
             this._initAncestorRefs();
-
 
             let configCallback = rawPageConfig.config;
             const options = {};
@@ -222,15 +227,15 @@ export default {
                     layoutRefs: this.layoutRefs,
                     loadRemoteModule,
                     parseModule,
-                    ...(appConfig.extensions || {})
+                    ...appConfig.extensions || {}
                 },
                 initState(name, state) {
                     if (arguments.length === 2) {
-                        options[name] = state;
+                        self.$set(options, name, state);
                         return state;
                     } else if (arguments.length === 1) {
                         const attr = 'autoState';
-                        options[attr] = name;
+                        self.$set(options, attr, name);
                         return name;
                     }
                 },
@@ -261,10 +266,21 @@ export default {
             };
             let methods = configCallback
                 ? (() => {
-                      return configCallback.bind(this)(info);
-                  })()
+                    return configCallback.bind(this)(info);
+                })()
                 : {};
 
+            if(methods instanceof Promise){
+                methods.then((methods)=>{
+                    this._renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted});
+                });
+            }else{
+                this._renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted});
+            }
+        },
+
+        _renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted}){
+            const appConfig = getConfig();
             let config = { options, methods };
 
             this.destroy = destroy;
@@ -272,70 +288,64 @@ export default {
 
             let pageConfig = this.merge(layout, config);
             this.innerPageConfig = pageConfig;
-            this.$nextTick(() => {
-                // 空页面
-                if (!layout) {
-                    return;
-                }
-                // 加载组件
-                loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
-                    this.$emit('on-component-ready');
+            // 加载组件
+            loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
+                this.$emit('on-component-ready');
 
-                    const showPage = () => {
-                        let logOptions = null;
+                const showPage = () => {
+                    let logOptions = null;
+                    if (appConfig.debug) {
+                        logOptions = deepCopy(this.options) || {};
+                    }
+                    if (setup) {
                         if (appConfig.debug) {
-                            logOptions = deepCopy(this.options) || {};
+                            log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                         }
-                        if (setup) {
-                            if (appConfig.debug) {
-                                log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                            }
-                            setup(() => {
-                                this.visible = true;
-                                this.pageConfig = pageConfig;
-                                this.innerOptions = options;
-                                this.lastPage = this.page;
-                                if (appConfig.debug) {
-                                    log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
-                                }
-                                this.$nextTick(() => {
-                                    this.$parent.$emit('on-rendered');
-                                    this._page_rendered = true;
-                                    mounted && mounted();
-                                });
-                            });
-                        } else {
+                        setup(() => {
                             this.visible = true;
                             this.pageConfig = pageConfig;
                             this.innerOptions = options;
                             this.lastPage = this.page;
-                            this.$nextTick(() => {
-                                this._page_rendered = true;
-                                this.$parent.$emit('on-rendered');
-                            });
                             if (appConfig.debug) {
                                 log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                             }
-                        }
-                    };
-
-                    if (appConfig.beforePageEnter) {
-                        if (appConfig.debug) {
-                            log.debug(`[page before enter] > pageName: ${this.page}`, true);
-                        }
-                        appConfig.beforePageEnter(
-                            {
-                                pageName: this.page,
-                                options: options
-                            },
-                            () => {
-                                showPage();
-                            }
-                        );
+                            this.$nextTick(() => {
+                                this.$parent.$emit('on-rendered');
+                                this._page_rendered = true;
+                                mounted && mounted();
+                            });
+                        });
                     } else {
-                        showPage();
+                        this.visible = true;
+                        this.pageConfig = pageConfig;
+                        this.innerOptions = options;
+                        this.lastPage = this.page;
+                        this.$nextTick(() => {
+                            this._page_rendered = true;
+                            this.$parent.$emit('on-rendered');
+                        });
+                        if (appConfig.debug) {
+                            log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                        }
                     }
-                });
+                };
+
+                if (appConfig.beforePageEnter) {
+                    if (appConfig.debug) {
+                        log.debug(`[page before enter] > pageName: ${this.page}`, true);
+                    }
+                    appConfig.beforePageEnter(
+                        {
+                            pageName: this.page,
+                            options: options
+                        },
+                        () => {
+                            showPage();
+                        }
+                    );
+                } else {
+                    showPage();
+                }
             });
         },
 
@@ -348,12 +358,32 @@ export default {
         },
 
         _initLayoutRefs(list) {
-            list.forEach(it => {
-                if (it.name) {
-                    this.layoutRefs[it.name] = it;
+            recursive(list, 'componentList', (item)=>{
+                if (item.name) {
+                    this.layoutRefs[item.name] = item;
                 }
-                if (it.componentList) {
-                    this._initLayoutRefs(it.componentList);
+            });
+        },
+
+        resourceDefinitionMergeToLayout(layout, resourceDefinition){
+            const layoutNames = [];
+            recursive(layout, 'componentList', (item)=>{
+                if (item.name) {
+                    layoutNames.push(item.name);
+                    const definition = resourceDefinition[item.name];
+                    if (definition) {
+                        item[definition.type] = definition.name;
+                    }
+                }
+            });
+
+            Object.keys(resourceDefinition).forEach((it)=>{
+                if(!layoutNames.includes(it)){
+                    const t = resourceDefinition[it];
+                    layout[0].componentList.push({
+                        name: it,
+                        [t.type]: t.name
+                    });
                 }
             });
         },

@@ -135,40 +135,36 @@ function checkLayoutNameRepeat(names, name) {
 
 export function mergeRows(componentList, options, events, slots, vm) {
     const Vue = getVue();
-    componentList.forEach((component)=>{
-        if (component.componentList) {
-            mergeRows(component.componentList, options, events, slots);
+    recursive(componentList, 'componentList', (component)=>{
+        if (component.name) {
+            if(typeOf(options[component.name]) === 'function'){
+                component.options = options[component.name]();
+                vm.$watch(options[component.name], (val)=>{
+                    component.options = val;
+                });
+            }else{
+                let val = options[component.name];
+                Object.defineProperty(options, component.name, {
+                    get(){
+                        return val;
+                    },
+                    set(newValue){
+                        val = newValue;
+                        component.options = newValue;
+                    }
+                });
+                component.options = options[component.name];
+            }
+        }
+
+        if (component.name && slots[component.name]) {
+            component.slots = slots[component.name];
+        }
+
+        if (component.name && events[component.name]) {
+            component.events = events[component.name];
         } else {
-            if (component.name && options[component.name]) {
-                if(typeOf(options[component.name]) === 'function'){
-                    component.options = options[component.name]();
-                    vm.$watch(options[component.name], (val)=>{
-                        component.options = val;
-                    });
-                }else{
-                    let val = options[component.name];
-                    Object.defineProperty(options, component.name, {
-                        get(){
-                            return val;
-                        },
-                        set(newValue){
-                            val = newValue;
-                            component.options = newValue;
-                        }
-                    });
-                    component.options = options[component.name];
-                }
-            }
-
-            if (component.name && slots[component.name]) {
-                component.slots = slots[component.name];
-            }
-
-            if (component.name && events[component.name]) {
-                component.events = events[component.name];
-            } else {
-                component.events = {};
-            }
+            component.events = {};
         }
     });
 }
@@ -271,7 +267,7 @@ function getResource(name, isRemote, type, id, level){
 
 export function getProxyComponent(name, isRemote, vpId) {
     const Vue = getVue();
-    const {resource, from, scoped, page} = getResource(name, isRemote, 'component', vpId, 0);
+    const {resource, from, scoped, page} = getResource(name, isRemote, 'component', vpId, 0) || {};
 
     if(!resource){
         throw Error(`组件"${name}"不存在！`);
@@ -340,6 +336,15 @@ export const log = {
         }
     }
 };
+
+export function recursive(list, childrenAttr, callback){
+    list.forEach((it)=>{
+        callback(it);
+        if(it[childrenAttr]){
+            recursive(it[childrenAttr], childrenAttr, callback);
+        }
+    });
+}
 
 export function toString(b) {
     if (b === null || b === undefined) {
@@ -424,7 +429,7 @@ export function getPageConfig(pageName, vpId, isRemote) {
     let appConfig = getConfig();
     let pageConfig;
 
-    const {resource, from, scoped, page} = getResource(pageName, isRemote, 'page', vpId, 0);
+    const {resource, from, scoped, page} = getResource(pageName, isRemote, 'page', vpId, 0) || {};
 
     if(!resource){
         throw Error(`页面"${pageName}"不存在！`);
