@@ -34,6 +34,7 @@ export class RemoteComponent {
 
         let scriptElement = document.createElement('script');
         scriptElement.innerHTML = `
+        //# sourceURL=${this.url}
             (function(){
             document.currentScript.src = '${this.url}';
                 let module = {}, exports = {};
