@@ -1,5 +1,5 @@
 <template>
-    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId"/>
+    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId" />
 </template>
 <script>
 import {
@@ -67,10 +67,10 @@ export default {
         options: {
             deep: true,
             handler(val, oldVal) {
-                if(this.optionsChange){
+                if (this.optionsChange) {
                     this.optionsChange(val, oldVal);
-                }else{
-                    if(this.destroy){
+                } else {
+                    if (this.destroy) {
                         this.destroy();
                     }
                     this.renderPage(this.rawPageConfig);
@@ -176,7 +176,7 @@ export default {
             const appConfig = getConfig();
             const isReload = rawPageConfig === this.rawPageConfig;
             const self = this;
-            if(!isReload){
+            if (!isReload) {
                 this.pageConfig = null;
                 this.visible = false;
                 this.refs = {};
@@ -185,36 +185,11 @@ export default {
                 return;
             }
 
-            let layout = rawPageConfig.layout;
-            let resourceDefinition = rawPageConfig.resourceDefinition || {};
-
-            if (!layout && !resourceDefinition) {
-                return;
-            }
-
             this.rawPageConfig = rawPageConfig;
 
-            if (typeof layout === 'function') {
-                layout = layout(createLayout);
-            } else if (!layout){
-                layout = [];
-            } else {
-                layout = deepCopy(layout);
-            }
-
-            if (isArray(layout)) {
-                layout = { componentList: layout };
-            } else if (!layout.componentList) {
-                layout = { componentList: [layout] };
-            }
-            this.resourceDefinitionMergeToLayout([layout], resourceDefinition);
-            this._initLayoutRefs([layout]);
-
-            this._initAncestorRefs();
-
-            let configCallback = rawPageConfig.config;
+            let configCallback = rawPageConfig;
             const options = {};
-            let setup, optionsChange, mounted, destroy;
+            let setup, optionsChange, mounted, destroy, layout;
             const route = this.$route || {};
             const info = {
                 context: {
@@ -227,7 +202,7 @@ export default {
                     layoutRefs: this.layoutRefs,
                     loadRemoteModule,
                     parseModule,
-                    ...appConfig.extensions || {}
+                    ...(appConfig.extensions || {})
                 },
                 initState(name, state) {
                     if (arguments.length === 2) {
@@ -238,6 +213,25 @@ export default {
                         self.$set(options, attr, name);
                         return name;
                     }
+                },
+                useState(name, state){
+                    if (arguments.length === 2) {
+                        self.$set(options, name, state);
+                        return state;
+                    } else if (arguments.length === 1) {
+                        const attr = 'autoState';
+                        self.$set(options, attr, name);
+                        return name;
+                    }
+                },
+                setLayout: (layoutConfig)=>{
+                    layout = layoutConfig;
+                    layout = this._initLayout(layoutConfig);
+                    this.layout = layout;
+                },
+                render: (layoutConfig)=>{
+                    layout = layoutConfig;
+                    layout = this._initLayout(layoutConfig);
                 },
                 setState(name, state) {
                     if (arguments.length === 2) {
@@ -270,16 +264,35 @@ export default {
                 })()
                 : {};
 
-            if(methods instanceof Promise){
-                methods.then((methods)=>{
-                    this._renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted});
+            if (methods instanceof Promise) {
+                methods.then(methods => {
+                    this._renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted });
                 });
-            }else{
-                this._renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted});
+            } else {
+                this._renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted });
             }
         },
 
-        _renderPage({options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted}){
+        _initLayout(layout) {
+            if (typeof layout === 'function') {
+                layout = layout(createLayout);
+            } else if (!layout) {
+                layout = [];
+            }
+
+            if (isArray(layout)) {
+                layout = { componentList: layout };
+            } else if (!layout.componentList) {
+                layout = { componentList: [layout] };
+            }
+            this._initLayoutRefs([layout]);
+
+            this._initAncestorRefs();
+
+            return layout;
+        },
+
+        _renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted }) {
             const appConfig = getConfig();
             let config = { options, methods };
 
@@ -358,32 +371,12 @@ export default {
         },
 
         _initLayoutRefs(list) {
-            recursive(list, 'componentList', (item)=>{
+            recursive(list, 'componentList', item => {
+                if(item.list){
+                    item.componentList = item.list;
+                }
                 if (item.name) {
                     this.layoutRefs[item.name] = item;
-                }
-            });
-        },
-
-        resourceDefinitionMergeToLayout(layout, resourceDefinition){
-            const layoutNames = [];
-            recursive(layout, 'componentList', (item)=>{
-                if (item.name) {
-                    layoutNames.push(item.name);
-                    const definition = resourceDefinition[item.name];
-                    if (definition) {
-                        item[definition.type] = definition.name;
-                    }
-                }
-            });
-
-            Object.keys(resourceDefinition).forEach((it)=>{
-                if(!layoutNames.includes(it)){
-                    const t = resourceDefinition[it];
-                    layout[0].componentList.push({
-                        name: it,
-                        [t.type]: t.name
-                    });
                 }
             });
         },

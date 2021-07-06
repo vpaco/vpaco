@@ -136,15 +136,16 @@ function checkLayoutNameRepeat(names, name) {
 export function mergeRows(componentList, options, events, slots, vm) {
     const Vue = getVue();
     recursive(componentList, 'componentList', (component)=>{
-        if (component.name) {
-            if(typeOf(options[component.name]) === 'function'){
-                component.options = options[component.name]();
-                vm.$watch(options[component.name], (val)=>{
+        if (component.name || component.ref) {
+            const _options = component.options || component.props || options[component.name];
+            if(typeOf(_options) === 'function'){
+                component.options = _options();
+                vm.$watch(options[component.name || component.ref], (val)=>{
                     component.options = val;
                 });
-            }else{
-                let val = options[component.name];
-                Object.defineProperty(options, component.name, {
+            }else {
+                let val = _options;
+                Object.defineProperty(options, component.name || component.ref, {
                     get(){
                         return val;
                     },
@@ -153,18 +154,14 @@ export function mergeRows(componentList, options, events, slots, vm) {
                         component.options = newValue;
                     }
                 });
-                component.options = options[component.name];
+                component.options = _options;
             }
+        } else if(component.props && !component.options){
+            component.options = component.props;
         }
 
         if (component.name && slots[component.name]) {
             component.slots = slots[component.name];
-        }
-
-        if (component.name && events[component.name]) {
-            component.events = events[component.name];
-        } else {
-            component.events = {};
         }
     });
 }
@@ -435,7 +432,7 @@ export function getPageConfig(pageName, vpId, isRemote) {
         throw Error(`页面"${pageName}"不存在！`);
     }
 
-    if(typeof resource === 'object'){
+    if(typeof resource === 'object' || typeof resource === 'function'){
         return Promise.resolve(resource);
     }
 

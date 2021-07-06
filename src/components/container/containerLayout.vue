@@ -30,7 +30,7 @@
                         :slots="comp.slots || {}"
                         :parentId="vpId"
                         :vp-is-page-component="true"
-                        :vp-page-component-name="comp.name"
+                        :vp-page-component-name="comp.name || comp.ref"
                         :remote-component="!!comp.remoteComponent"
                         :vp-component-name="comp.component"
                         ref="component"
@@ -43,18 +43,19 @@
                         :isRemote="!!comp.remotePage"
                         :parentId="vpId"
                         :class="getComponentContentStyle(comp)"
-                        :vp-page-component-name="comp.name"
+                        :vp-page-component-name="comp.name || comp.ref"
                         ref="page"
                         :vp-is-page-component="true"
                     />
                 </div>
                 <div
-                    v-else-if="comp.options && comp.options.render"
+                    v-else-if="comp.render || (comp.options && comp.options.render)"
                     class="vp-component-wrap"
+                    :key="comp.name + '_' + index"
                     :class="getComponentWrapClass(comp)"
                     :style="comp.style"
                 >
-                  <renderComponent :render="comp.options.render" :parent-id="vpId"></renderComponent>
+                  <renderComponent :render="comp.render || comp.options.render" :parent-id="vpId"></renderComponent>
                 </div>
             </template>
         </template>
