@@ -15,7 +15,8 @@ import {
     addRenderStack,
     removeRenderStackItem,
     getUid,
-    recursive
+    recursive,
+    getRefs
 } from '../utils';
 import Container from './container/container';
 import { getConfig } from '../config';
@@ -41,7 +42,7 @@ export default {
         }
     },
 
-    data: function() {
+    data: function () {
         return {
             vpIsPage: true,
             pageConfig: null,
@@ -56,11 +57,11 @@ export default {
     },
 
     watch: {
-        page: function() {
+        page: function () {
             this.reloadPage();
         },
 
-        config: function() {
+        config: function () {
             this.reloadPage();
         },
 
@@ -182,14 +183,14 @@ export default {
                 this.refs = {};
             }
             if (this.page && !rawPageConfig) {
-                return;
+                return Promise.resolve();
             }
 
             this.rawPageConfig = rawPageConfig;
 
             let configCallback = rawPageConfig;
             const options = {};
-            let setup, optionsChange, mounted, destroy, layout;
+            let setup, mounted, destroy, layout;
             const route = this.$route || {};
             const info = {
                 context: {
@@ -202,6 +203,25 @@ export default {
                     layoutRefs: this.layoutRefs,
                     loadRemoteModule,
                     parseModule,
+                    reload: ref => {
+                        return new Promise((resolve, reject) => {
+                            if (!ref) {
+                                this.renderPage(this.rawPageConfig).then(()=>{
+                                    resolve();
+                                });
+                            } else if (this.layoutRefs[ref]) {
+                                this.layoutRefs[ref].hidden = true;
+                                this.$nextTick(() => {
+                                    this.layoutRefs[ref].hidden = false;
+                                    this.$nextTick(() => {
+                                        resolve();
+                                    });
+                                });
+                            }else {
+                                resolve();
+                            }
+                        });
+                    },
                     ...(appConfig.extensions || {})
                 },
                 initState(name, state) {
@@ -214,7 +234,7 @@ export default {
                         return name;
                     }
                 },
-                useState(name, state){
+                useState(name, state) {
                     if (arguments.length === 2) {
                         self.$set(options, name, state);
                         return state;
@@ -224,12 +244,12 @@ export default {
                         return name;
                     }
                 },
-                setLayout: (layoutConfig)=>{
+                setLayout: layoutConfig => {
                     layout = layoutConfig;
                     layout = this._initLayout(layoutConfig);
                     this.layout = layout;
                 },
-                render: (layoutConfig)=>{
+                render: layoutConfig => {
                     layout = layoutConfig;
                     layout = this._initLayout(layoutConfig);
                 },
@@ -248,8 +268,8 @@ export default {
                 setup(callback) {
                     setup = callback;
                 },
-                optionsChange(callback) {
-                    optionsChange = callback;
+                optionsChange: callback => {
+                    this.optionsChange = callback;
                 },
                 mounted(callback) {
                     mounted = callback;
@@ -260,16 +280,16 @@ export default {
             };
             let methods = configCallback
                 ? (() => {
-                    return configCallback.bind(this)(info);
-                })()
+                      return configCallback.bind(this)(info);
+                  })()
                 : {};
 
             if (methods instanceof Promise) {
-                methods.then(methods => {
-                    this._renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted });
+                return methods.then(methods => {
+                    return this._renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted });
                 });
             } else {
-                this._renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted });
+                return this._renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted });
             }
         },
 
@@ -289,76 +309,80 @@ export default {
 
             this._initAncestorRefs();
 
+            getRefs(layout);
+
             return layout;
         },
 
-        _renderPage({ options, methods, destroy, optionsChange, layout, rawPageConfig, setup, mounted }) {
+        _renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted }) {
             const appConfig = getConfig();
             let config = { options, methods };
 
             this.destroy = destroy;
-            this.optionsChange = optionsChange;
 
             let pageConfig = this.merge(layout, config);
-            this.innerPageConfig = pageConfig;
             // 加载组件
-            loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
-                this.$emit('on-component-ready');
+            return new Promise((resolve, reject) => {
+                loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
+                    this.$emit('on-component-ready');
 
-                const showPage = () => {
-                    let logOptions = null;
-                    if (appConfig.debug) {
-                        logOptions = deepCopy(this.options) || {};
-                    }
-                    if (setup) {
+                    const showPage = () => {
+                        let logOptions = null;
                         if (appConfig.debug) {
-                            log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                            logOptions = deepCopy(this.options) || {};
                         }
-                        setup(() => {
+                        if (setup) {
+                            if (appConfig.debug) {
+                                log.debug(`[page setup] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                            }
+                            setup(() => {
+                                this.visible = true;
+                                this.pageConfig = pageConfig;
+                                this.innerOptions = options;
+                                this.lastPage = this.page;
+                                if (appConfig.debug) {
+                                    log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
+                                }
+                                this.$nextTick(() => {
+                                    this.$parent.$emit('on-rendered');
+                                    this._page_rendered = true;
+                                    mounted && mounted();
+                                    resolve();
+                                });
+                            });
+                        } else {
                             this.visible = true;
                             this.pageConfig = pageConfig;
                             this.innerOptions = options;
                             this.lastPage = this.page;
+                            this.$nextTick(() => {
+                                this._page_rendered = true;
+                                this.$parent.$emit('on-rendered');
+                                resolve();
+                            });
                             if (appConfig.debug) {
                                 log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                             }
-                            this.$nextTick(() => {
-                                this.$parent.$emit('on-rendered');
-                                this._page_rendered = true;
-                                mounted && mounted();
-                            });
-                        });
-                    } else {
-                        this.visible = true;
-                        this.pageConfig = pageConfig;
-                        this.innerOptions = options;
-                        this.lastPage = this.page;
-                        this.$nextTick(() => {
-                            this._page_rendered = true;
-                            this.$parent.$emit('on-rendered');
-                        });
-                        if (appConfig.debug) {
-                            log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                         }
-                    }
-                };
+                    };
 
-                if (appConfig.beforePageEnter) {
-                    if (appConfig.debug) {
-                        log.debug(`[page before enter] > pageName: ${this.page}`, true);
-                    }
-                    appConfig.beforePageEnter(
-                        {
-                            pageName: this.page,
-                            options: options
-                        },
-                        () => {
-                            showPage();
+                    if (appConfig.beforePageEnter) {
+                        if (appConfig.debug) {
+                            log.debug(`[page before enter] > pageName: ${this.page}`, true);
                         }
-                    );
-                } else {
-                    showPage();
-                }
+                        appConfig.beforePageEnter(
+                            {
+                                pageName: this.page,
+                                options: options
+                            },
+                            () => {
+                                showPage();
+                            }
+                        );
+                    } else {
+                        showPage();
+                    }
+                });
             });
         },
 
@@ -372,11 +396,11 @@ export default {
 
         _initLayoutRefs(list) {
             recursive(list, 'componentList', item => {
-                if(item.list){
+                if (item.list) {
                     item.componentList = item.list;
                 }
-                if (item.name) {
-                    this.layoutRefs[item.name] = item;
+                if (item.ref) {
+                    this.layoutRefs[item.ref] = item;
                 }
             });
         },

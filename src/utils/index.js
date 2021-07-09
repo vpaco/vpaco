@@ -96,27 +96,27 @@ export function deepCopy(obj) {
     return dp(obj);
 }
 
-export function getNames(config) {
-    let names = [];
-    getNames_(config.componentList, names);
+export function getRefs(config) {
+    let refs = [];
+    getNames_(config.componentList, refs);
 
-    return names;
+    return refs;
 }
 
-function getNames_(componentList, names) {
+function getNames_(componentList, refs) {
     componentList.forEach((component)=>{
         if (component.componentList) {
-            getNames_(component.componentList, names);
+            getNames_(component.componentList, refs);
         } else {
-            if (component.name) {
-                if (checkLayoutNameRepeat(names, component.name)) {
+            if (component.ref) {
+                if (checkLayoutNameRepeat(refs, component.name)) {
                     // eslint-disable-next-line no-console
-                    console && console.error('layout.js中name重复，重复name名称：' + component.name);
+                    console && console.error('render中ref重复，重复ref名称：' + component.ref);
                 }
                 if (component.hidden === undefined) {
                     component.hidden = false;
                 }
-                names.push(component.name);
+                refs.push(component.ref);
             }
         }
     });
