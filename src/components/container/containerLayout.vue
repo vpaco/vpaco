@@ -1,97 +1,38 @@
 <template>
     <div>
-        <template v-for="(comp, index) in componentList">
-            <template v-if="!comp.hidden">
-                <template v-if="!!comp.componentList">
-                    <container-layout
-                        :key="index"
-                        v-if="!comp.hidden"
-                        class="vp-component-list"
-                        :class="getComponentWrapClass(comp)"
-                        :data-comp-id="comp.id"
-                        :refs="refs"
-                        :style="comp.style"
-                        :vpId="vpId"
-                        :componentList="comp.componentList"
-                    />
-                </template>
-                <div
-                    v-else-if="comp.component || comp.page"
-                    class="vp-component-wrap"
-                    :class="getComponentWrapClass(comp)"
-                    :data-comp-id="comp.id"
-                    :key="comp.name + '_' + index"
-                    :style="comp.style"
-                >
-                    <component
-                        v-if="comp.component"
-                        :is="comp.component"
-                        :options="comp.options || {}"
-                        :slots="comp.slots || {}"
-                        :parentId="vpId"
-                        :vp-is-page-component="true"
-                        :vp-page-component-name="comp.name || comp.ref"
-                        :remote-component="!!comp.remoteComponent"
-                        :vp-component-name="comp.component"
-                        ref="component"
-                        :class="getComponentContentStyle(comp)"
-                    />
-                    <VpPage
-                        v-if="comp.page || comp.remotePage"
-                        :name="comp.page || comp.remotePage"
-                        :options="comp.options || {}"
-                        :isRemote="!!comp.remotePage"
-                        :parentId="vpId"
-                        :class="getComponentContentStyle(comp)"
-                        :vp-page-component-name="comp.name || comp.ref"
-                        ref="page"
-                        :vp-is-page-component="true"
-                    />
-                </div>
-                <div
-                    v-else-if="comp.render || (comp.options && comp.options.render)"
-                    class="vp-component-wrap"
-                    :key="comp.name + '_' + index"
-                    :class="getComponentWrapClass(comp)"
-                    :style="comp.style"
-                >
-                  <renderComponent :render="comp.render || comp.options.render" :parent-id="vpId"></renderComponent>
-                </div>
+        <template v-for="(comp, index) in list">
+            <template v-if="isArray(comp)">
+                <layoutItem v-for="(item, index) in comp" :comp="item" :key="index" :refs="refs"></layoutItem>
+            </template>
+            <template v-else>
+                <layoutItem :comp="comp" :refs="refs" :key="index"></layoutItem>
             </template>
         </template>
     </div>
 </template>
 <script>
 import renderComponent from './renderComponent';
+import layoutItem from './layoutItem.vue';
 export default {
-    components: {renderComponent},
+    components: { renderComponent, layoutItem },
     props: {
-        componentList: Array,
+        list: Array,
         refs: Object,
         vpId: Number
     },
     name: 'containerLayout',
 
-    mounted() {
-        this.setComponentRefs();
-        (this.componentList || []).forEach((component)=>{
-            this.$watch(
-                () => {
-                    return component.hidden;
-                },
-                () => {
-                    this.setComponentRefs();
-                }
-            );
-        });
-    },
+    mounted() {},
 
     methods: {
+        isArray(item) {
+            return Array.isArray(item);
+        },
         setComponentRefs() {
-            (this.$refs.component || []).forEach((it)=>{
+            (this.$refs.component || []).forEach(it => {
                 this.refs[it.vpPageComponentName] = it;
             });
-            (this.$refs.page || []).forEach((it)=>{
+            (this.$refs.page || []).forEach(it => {
                 this.refs[it.vpPageComponentName] = it.$children[0];
             });
         },

@@ -98,15 +98,15 @@ export function deepCopy(obj) {
 
 export function getRefs(config) {
     let refs = [];
-    getNames_(config.componentList, refs);
+    getNames_(config.list, refs);
 
     return refs;
 }
 
-function getNames_(componentList, refs) {
-    componentList.forEach((component)=>{
-        if (component.componentList) {
-            getNames_(component.componentList, refs);
+function getNames_(list, refs) {
+    list.forEach((component)=>{
+        if (component.list) {
+            getNames_(component.list, refs);
         } else {
             if (component.ref) {
                 if (checkLayoutNameRepeat(refs, component.name)) {
@@ -133,52 +133,21 @@ function checkLayoutNameRepeat(names, name) {
     return hasOne;
 }
 
-export function mergeRows(componentList, options, events, slots, vm) {
-    const Vue = getVue();
-    recursive(componentList, 'componentList', (component)=>{
-        if (component.name || component.ref) {
-            const _options = component.options || component.props || options[component.name];
-            if(typeOf(_options) === 'function'){
-                component.options = _options();
-                vm.$watch(options[component.name || component.ref], (val)=>{
-                    component.options = val;
-                });
-            }else {
-                let val = _options;
-                Object.defineProperty(options, component.name || component.ref, {
-                    get(){
-                        return val;
-                    },
-                    set(newValue){
-                        val = newValue;
-                        component.options = newValue;
-                    }
-                });
-                component.options = _options;
-            }
-        } else if(component.props && !component.options){
-            component.options = component.props;
-        }
-
-        if (component.name && slots[component.name]) {
-            component.slots = slots[component.name];
-        }
-    });
-}
-
 export function loadComponent(layout, pageConfig, pageName, vpId) {
     return getRemoteComponents().then(()=>{
-        return loadComponent_(layout.componentList, pageConfig, pageName, vpId);
+        return loadComponent_(layout.list, pageConfig, pageName, vpId);
     });
 }
 
-function loadComponent_(componentList, pageConfig, pageName, vpId) {
+function loadComponent_(list, pageConfig, pageName, vpId) {
     const appConfig = getConfig();
     let defs = [];
-    componentList.forEach((component)=>{
-        if (component.componentList) {
-            defs.push(loadComponent_(component.componentList, pageConfig, pageName, vpId));
-        } else if (component.component || component.remoteComponent) {
+    list.forEach((component)=>{
+        if (component.list) {
+            defs.push(loadComponent_(component.list, pageConfig, pageName, vpId));
+        } else if(Array.isArray(component)){
+            defs.push(loadComponent_(component, pageConfig, pageName, vpId));
+        }else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
             defs.push(getProxyComponent(component.componentName, component.isRemote, vpId).then(proxyName => {
                 component.component = proxyName;
@@ -444,15 +413,54 @@ export function getPageConfig(pageName, vpId, isRemote) {
 export function createLayout(ele, config, children){
     if(ele === 'container'){
         return {
-            ...config || {},
-            componentList: children
+            ...children === undefined ? {} : config || {},
+            list: children || config
         };
     }else if (ele === 'component'){
         config = {...config.attrs || {}, ...config};
-        const {alias, name, ...others} = config;
-        return {name: alias, component: name, ...others || {}};
-    }else if (ele === 'remoteComponent'){
-        const {alias, name, ...others} = config;
-        return {name: alias, remoteComponent: name, ...others || {}};
+        const {hidden = false, ref, name, ...others} = config;
+        return {hidden, ref, component: name, ...others || {}};
+    } else if (ele === 'page'){
+        config = {...config.attrs || {}, ...config};
+        const {hidden = false, ref, name, ...others} = config;
+        return {hidden, ref, page: name, ...others || {}};
+    }
+    else if (ele === 'custom'){
+        config = {...config.attrs || {}, ...config};
+        const {hidden = false, render, ...others} = config;
+        return {hidden, render, ...others || {}};
+    }
+}
+
+export function deepFreeze(obj) {
+    let propNames = Object.getOwnPropertyNames(obj);
+    let result = Array.isArray(obj) ? [...obj] : {...obj};
+    propNames.forEach(function(name) {
+        let prop = result[name];
+        if (typeof prop === 'object' && prop !== null) {
+            result[name] = deepFreeze(prop);
+        }
+    });
+    return Object.freeze(result);
+}
+
+export function debounce(fn, wait, immediate) {
+    let timer;
+    return function () {
+        if (timer) clearTimeout(timer);
+        if (immediate) {
+            // 如果已经执行过，不再执行
+            var callNow = !timer;
+            timer = setTimeout(() => {
+                timer = null;
+            }, wait)
+            if (callNow) {
+                fn.apply(this, arguments)
+            }
+        } else {
+            timer = setTimeout(() => {
+                fn.apply(this, arguments)
+            }, wait);
+        }
     }
 }

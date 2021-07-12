@@ -9,6 +9,7 @@ import {
 } from './utils';
 import Page from './components/page';
 import Component from './components/component';
+import vpacoContainerLayout from './components/container/containerLayout';
 
 export const VpPage = Page;
 export const VpComponent = Component;
@@ -20,6 +21,7 @@ export const getComponent = _getComponent;
 export const install = function (Vue, opts = {}) {
     Vue.component('VpPage', VpPage);
     Vue.component('VpComponent', VpComponent);
+    Vue.component('vpacoContainerLayout', vpacoContainerLayout);
     setVue(Vue);
 };
 

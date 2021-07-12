@@ -1,5 +1,5 @@
 <template>
-    <ContainerLayout :componentList="config.componentList" :class="config.class" :refs="refs" :style="config.style" :vpId="vpId"/>
+    <ContainerLayout :list="config.list" :class="config.class" :refs="refs" :style="config.style" :vpId="vpId"/>
 </template>
 <script>
 import ContainerLayout from './containerLayout.vue';

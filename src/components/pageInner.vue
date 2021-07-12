@@ -1,9 +1,12 @@
 <template>
-    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId" />
+    <keep-alive
+        include="aHR0cDovL3ltbS1jZG4ub3NzLWNuLXNoYW5naGFpLmFsaXl1bmNzLmNvbS9mZS1jb21wb25lbnRzL2ZyYW1lLWhlYWRlci8xLjAuMi9pbmRleC5qcw_remote_proxy"
+    >
+        <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId" />
+    </keep-alive>
 </template>
 <script>
 import {
-    mergeRows,
     log,
     deepCopy,
     loadComponent,
@@ -16,7 +19,9 @@ import {
     removeRenderStackItem,
     getUid,
     recursive,
-    getRefs
+    getRefs,
+    deepFreeze,
+    debounce
 } from '../utils';
 import Container from './container/container';
 import { getConfig } from '../config';
@@ -50,9 +55,10 @@ export default {
             visible: false,
             lastPage: null,
             innerOptions: null,
-            layout: null,
             vpId: getUid(),
-            loadRemoteModule
+            loadRemoteModule,
+            state: {},
+            useStateIndex: 0
         };
     },
 
@@ -138,20 +144,6 @@ export default {
                 return '';
             }
         },
-        merge(layout, { slots = {}, events = {}, options = {}, methods = {} }) {
-            if (!layout) {
-                return null;
-            }
-            Object.keys(methods || {}).forEach(key => {
-                this[key] = methods[key];
-            });
-
-            if (layout.componentList) {
-                mergeRows(layout.componentList, options, events, slots, this);
-            }
-
-            return layout;
-        },
         reloadPage() {
             if (this.lastPage) {
                 this.destroy && this.destroy();
@@ -172,6 +164,13 @@ export default {
                 });
             }
         },
+
+        reReloadPage: debounce(function () {
+            if(!this.pageConfig){
+                return;
+            }
+            this._renderPage(true);
+        }, 10),
 
         renderPage(rawPageConfig) {
             const appConfig = getConfig();
@@ -206,7 +205,7 @@ export default {
                     reload: ref => {
                         return new Promise((resolve, reject) => {
                             if (!ref) {
-                                this.renderPage(this.rawPageConfig).then(()=>{
+                                this.renderPage(this.rawPageConfig).then(() => {
                                     resolve();
                                 });
                             } else if (this.layoutRefs[ref]) {
@@ -217,7 +216,7 @@ export default {
                                         resolve();
                                     });
                                 });
-                            }else {
+                            } else {
                                 resolve();
                             }
                         });
@@ -234,15 +233,31 @@ export default {
                         return name;
                     }
                 },
-                useState(name, state) {
-                    if (arguments.length === 2) {
-                        self.$set(options, name, state);
-                        return state;
-                    } else if (arguments.length === 1) {
-                        const attr = 'autoState';
-                        self.$set(options, attr, name);
-                        return name;
+                useState(state) {
+                    const index = self.useStateIndex++;
+                    // let freezeState;
+                    if (self.state[index]) {
+                        // freezeState = deepFreeze(self.state[index]);
+                    } else {
+                        // freezeState  = deepFreeze(state);
+                        self.$set(self.state, index, state);
+                        self.$watch(
+                            () => {
+                                return self.state[index];
+                            },
+                            () => {
+                                self.reReloadPage();
+                            },
+                            { deep: true }
+                        );
                     }
+                    return self.state[index];
+                    // return [realState, (state)=>{
+                    //     Object.keys(state).forEach((key)=>{
+                    //         self.state[index][key] = state[key];
+                    //     });
+                    //     self.reReloadPage();
+                    // }];
                 },
                 setLayout: layoutConfig => {
                     layout = layoutConfig;
@@ -251,7 +266,7 @@ export default {
                 },
                 render: layoutConfig => {
                     layout = layoutConfig;
-                    layout = this._initLayout(layoutConfig);
+                    this.layout = layoutConfig;
                 },
                 setState(name, state) {
                     if (arguments.length === 2) {
@@ -266,30 +281,32 @@ export default {
                     }
                 },
                 setup(callback) {
-                    setup = callback;
+                    this.setup = callback;
                 },
                 optionsChange: callback => {
                     this.optionsChange = callback;
                 },
                 mounted(callback) {
-                    mounted = callback;
+                    this.mounted = callback;
                 },
                 destroy(callback) {
-                    destroy = callback;
+                    this.destroy = callback;
                 }
             };
             let methods = configCallback
                 ? (() => {
+                      this.useStateIndex = 0;
                       return configCallback.bind(this)(info);
                   })()
                 : {};
 
             if (methods instanceof Promise) {
                 return methods.then(methods => {
-                    return this._renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted });
+                    this.methods = methods;
+                    return this._renderPage();
                 });
             } else {
-                return this._renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted });
+                return this._renderPage();
             }
         },
 
@@ -301,9 +318,9 @@ export default {
             }
 
             if (isArray(layout)) {
-                layout = { componentList: layout };
-            } else if (!layout.componentList) {
-                layout = { componentList: [layout] };
+                layout = { list: layout };
+            } else if (!layout.list && !layout.list) {
+                layout = { list: [layout] };
             }
             this._initLayoutRefs([layout]);
 
@@ -314,17 +331,90 @@ export default {
             return layout;
         },
 
-        _renderPage({ options, methods, destroy, layout, rawPageConfig, setup, mounted }) {
+        updatePageConfig(pageConfig) {
+            this.layoutRefs = {};
+            this._updatePageConfig(pageConfig.list, this.pageConfig.list);
+
+            return this.pageConfig;
+        },
+
+        _updatePageConfig(newList, originList) {
+            newList.forEach((it, index) => {
+                if (it.component) {
+                    const originIndex = originList.findIndex(it1=>it1 && 
+                    it1.component === it.component &&
+                    it1.key === it.key &&
+                    it1.ref === it.ref &&
+                    it1.props === it.props 
+                    );
+                    if (originIndex >= 0) {
+                        if(originIndex >  index ){
+                            originList.splice(index, originIndex -  index);
+                        }
+                        originList[index].props = it.props;
+                        originList[index].hidden = it.hidden;
+                    }else{
+                        originList.splice(index, 0, it);
+                    }
+                    if(it.ref){
+                        this.layoutRefs[it.ref] = originList[index];
+                    }
+                }else if (it.page) {
+                    const originIndex = originList.findIndex(it1=>it1 && 
+                    it1.page === it.page &&
+                    it1.key === it.key &&
+                    it1.ref === it.ref &&
+                    it1.props === it.props 
+                    );
+                    if (originIndex >= 0) {
+                        if(originIndex >  index ){
+                            originList.splice(index, originIndex -  index);
+                        }
+                        originList[index].props = it.props;
+                        originList[index].hidden = it.hidden;
+                    }else{
+                        originList.splice(index, 0, it);
+                    }
+                    if(it.ref){
+                        this.layoutRefs[it.ref] = originList[index];
+                    }
+                }else if (it.list) {
+                    if(originList[index].list){
+                        this._updatePageConfig(it.list, originList[index].list);  
+                    }else{
+                        originList.splice(index, 0, it);
+                    }
+                }else if(Array.isArray(it)){
+                    if(Array.isArray(originList[index])) {
+                        this._updatePageConfig(it, originList[index]);
+                    }else{
+                        originList.splice(index, 1, it);
+                    }
+                }else{
+                    originList.splice(index, 1, it);
+                }
+            });
+
+            originList.length = newList.length;
+        },
+
+        _renderPage(isUpdate) {
+            let { options, methods, destroy, layout, rawPageConfig, setup, mounted } = this;
             const appConfig = getConfig();
             let config = { options, methods };
 
             this.destroy = destroy;
-
-            let pageConfig = this.merge(layout, config);
+            layout = this._initLayout(layout);
+            
+            let pageConfig = layout; // this.merge(layout, config);
             // 加载组件
             return new Promise((resolve, reject) => {
                 loadComponent(layout, rawPageConfig, this.page, this.vpId).then(() => {
                     this.$emit('on-component-ready');
+
+                    if (isUpdate) {
+                        pageConfig = this.updatePageConfig(pageConfig);
+                    }
 
                     const showPage = () => {
                         let logOptions = null;
@@ -395,10 +485,7 @@ export default {
         },
 
         _initLayoutRefs(list) {
-            recursive(list, 'componentList', item => {
-                if (item.list) {
-                    item.componentList = item.list;
-                }
+            recursive(list, 'list', item => {
                 if (item.ref) {
                     this.layoutRefs[item.ref] = item;
                 }
