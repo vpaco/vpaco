@@ -113,8 +113,8 @@ function getNames_(list, refs) {
                     // eslint-disable-next-line no-console
                     console && console.error('render中ref重复，重复ref名称：' + component.ref);
                 }
-                if (component.hidden === undefined) {
-                    component.hidden = false;
+                if (component.visible === undefined) {
+                    component.visible = true;
                 }
                 refs.push(component.ref);
             }
@@ -412,23 +412,27 @@ export function getPageConfig(pageName, vpId, isRemote) {
 
 export function createLayout(ele, config, children){
     if(ele === 'container'){
+        let conf = children === undefined ? {} : config || {};
+        conf = {...conf.attrs || {}, ...conf};
+        const {visible = true, render, ...others} = conf;
         return {
-            ...children === undefined ? {} : config || {},
+            ...others,
+            visible,
             list: children || config
         };
     }else if (ele === 'component'){
         config = {...config.attrs || {}, ...config};
-        const {hidden = false, ref, name, ...others} = config;
-        return {hidden, ref, component: name, ...others || {}};
+        const {visible = true, ref, name, ...others} = config;
+        return {...others || {}, visible, ref, component: name};
     } else if (ele === 'page'){
         config = {...config.attrs || {}, ...config};
-        const {hidden = false, ref, name, ...others} = config;
-        return {hidden, ref, page: name, ...others || {}};
+        const {visible = true, ref, name, ...others} = config;
+        return {...others || {}, visible, ref, page: name};
     }
     else if (ele === 'custom'){
         config = {...config.attrs || {}, ...config};
-        const {hidden = false, render, ...others} = config;
-        return {hidden, render, ...others || {}};
+        const {visible = true, render, ...others} = config;
+        return {...others || {}, visible, render};
     }
 }
 

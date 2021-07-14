@@ -209,9 +209,9 @@ export default {
                                     resolve();
                                 });
                             } else if (this.layoutRefs[ref]) {
-                                this.layoutRefs[ref].hidden = true;
+                                this.layoutRefs[ref].visible = false;
                                 this.$nextTick(() => {
-                                    this.layoutRefs[ref].hidden = false;
+                                    this.layoutRefs[ref].visible = true;
                                     this.$nextTick(() => {
                                         resolve();
                                     });
@@ -280,16 +280,16 @@ export default {
                         });
                     }
                 },
-                setup(callback) {
+                setup: (callback) => {
                     this.setup = callback;
                 },
                 optionsChange: callback => {
                     this.optionsChange = callback;
                 },
-                mounted(callback) {
+                mounted: (callback) => {
                     this.mounted = callback;
                 },
-                destroy(callback) {
+                destroy: (callback) => {
                     this.destroy = callback;
                 }
             };
@@ -352,7 +352,7 @@ export default {
                             originList.splice(index, originIndex -  index);
                         }
                         originList[index].props = it.props;
-                        originList[index].hidden = it.hidden;
+                        originList[index].visible = it.visible;
                     }else{
                         originList.splice(index, 0, it);
                     }
@@ -371,7 +371,7 @@ export default {
                             originList.splice(index, originIndex -  index);
                         }
                         originList[index].props = it.props;
-                        originList[index].hidden = it.hidden;
+                        originList[index].visible = it.visible;
                     }else{
                         originList.splice(index, 0, it);
                     }
@@ -380,6 +380,7 @@ export default {
                     }
                 }else if (it.list) {
                     if(originList[index].list){
+                        originList[index].visible = it.visible;
                         this._updatePageConfig(it.list, originList[index].list);  
                     }else{
                         originList.splice(index, 0, it);

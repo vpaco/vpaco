@@ -1,7 +1,6 @@
 <template>
     <vpacoContainerLayout
-        :key="index"
-        v-if="!comp.hidden && !!comp.list"
+        v-if="!comp.visible === false && !!comp.list"
         class="vp-component-list"
         :class="getComponentWrapClass(comp)"
         :data-comp-id="comp.id"
@@ -11,11 +10,10 @@
         :list="comp.list"
     />
     <div
-        v-else-if="!comp.hidden && (comp.component || comp.page)"
+        v-else-if="!comp.visible === false && (comp.component || comp.page)"
         class="vp-component-wrap"
         :class="getComponentWrapClass(comp)"
         :data-comp-id="comp.id"
-        :key="comp.ref + '_' + index"
         :style="comp.style"
     >
         <component
@@ -44,9 +42,8 @@
         />
     </div>
     <div
-        v-else-if="!comp.hidden && (comp.render || (comp.props && comp.props.render))"
+        v-else-if="!comp.visible === false && (comp.render || (comp.props && comp.props.render))"
         class="vp-component-wrap"
-        :key="comp.ref + '_' + index"
         :class="getComponentWrapClass(comp)"
         :style="comp.style"
     >
@@ -68,7 +65,7 @@ export default {
         this.setComponentRefs();
         this.$watch(
             () => {
-                return this.comp.hidden;
+                return this.comp.visible;
             },
             () => {
                 this.setComponentRefs();
