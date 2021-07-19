@@ -296,6 +296,7 @@ export default {
             let methods = configCallback
                 ? (() => {
                       this.useStateIndex = 0;
+                      this.state = {};
                       return configCallback.bind(this)(info);
                   })()
                 : {};
