@@ -254,6 +254,9 @@ export function getProxyComponent(name, isRemote, vpId) {
 
     if(typeof resource === 'string'){
         proxyName = btoa(resource).replace(/\=/g, '') + '_remote_proxy';
+        if(Vue.component(proxyName)){
+            return Promise.resolve(proxyName);
+        }
         return loadRemoteModule(resource).then((component)=>{
             Vue.component(proxyName, proxy(component,name));
             return proxyName;

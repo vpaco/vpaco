@@ -26,7 +26,20 @@ import {
 import Container from './container/container';
 import { getConfig } from '../config';
 import isArray from 'isarray';
-
+/**
+ * 页面中状态分2种：
+ * 1、外部传入 props
+ * 2、内部组件及页面的state
+ * 
+ * 当1改变时的处理，有2种处理方式可供选择：
+ * 1、自动模式：
+ *  自动模式时，当检测到页面出入的props改变时，自动再次执行页面配置函数，此时页面内部组件的state将会重新生成。页面内部组件不会销毁，但是状态会置为最新的。
+ * 2、手动模式
+ *  手动模式时，通过optionsChange接口props的改变，在optionsChange的处理函数中手动对props的改变对页面内部状态做更新。
+ * 
+ * 内部组件及页面的state改变时, 会重新执行render函数，不会重新执行页面配置函数；执行render函数组件不会销毁重建，只是更新状态。
+ * 
+ */
 export default {
     components: { Container },
     props: {
@@ -233,6 +246,7 @@ export default {
                         return name;
                     }
                 },
+                // 页面reload时 useState会再次调用，$watch会调用多次
                 useState(state) {
                     const index = self.useStateIndex++;
                     // let freezeState;
@@ -241,15 +255,21 @@ export default {
                     } else {
                         // freezeState  = deepFreeze(state);
                         self.$set(self.state, index, state);
-                        self.$watch(
-                            () => {
-                                return self.state[index];
-                            },
-                            () => {
-                                self.reReloadPage();
-                            },
-                            { deep: true }
-                        );
+                        // $set后如果直接$watch首次也会触发$watch的处理函数，需要加一个nexttick
+                        self.$nextTick(()=>{
+                            self.$watch(
+                                () => {
+                                    return self.state[index];
+                                },
+                                () => {
+                                    if(self.state[index] === undefined){
+                                        return;
+                                    }
+                                    self.reReloadPage();
+                                },
+                                { deep: true, immdiate: false }
+                            );
+                        });
                     }
                     return self.state[index];
                     // return [realState, (state)=>{
@@ -295,7 +315,7 @@ export default {
             };
             let methods = configCallback
                 ? (() => {
-                      this.useStateIndex = 0;
+                      // this.useStateIndex = 0;
                       this.state = {};
                       return configCallback.bind(this)(info);
                   })()
