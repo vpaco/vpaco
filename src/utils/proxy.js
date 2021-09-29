@@ -69,9 +69,13 @@ export default function(component, name) {
                 }
             });
 
-            Object.keys(this.slots || {}).forEach(it => {
+            Object.keys(this.options && this.options.$on || {}).forEach(it => {
+                events[it] = this.options.$on[it];
+            });
+
+            Object.keys(this.options && this.options.$slots || {}).forEach(it => {
                 slots[it] = props => {
-                    return this.slots[it](h, props);
+                    return this.options.$slots[it](h, props);
                 };
 
                 if (it === 'default') {
