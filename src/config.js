@@ -61,10 +61,10 @@ export function register(config) {
                         ...extensions,
                         ...globalConfig.extensions || {}
                     };
-                    return res;
+                    return {appConfig: globalConfig, config: res};
                 });
             }else{
-                return res;
+                return {appConfig: globalConfig, config: res};
             }
         }).catch(()=>{
             globalConfig.remoteUrlLoading = false;
