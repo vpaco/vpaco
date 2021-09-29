@@ -22,7 +22,7 @@ export default {
             type: String
         },
         config: {
-            type: Object
+            type: Function
         },
         isRemote: {
             type: Boolean,
