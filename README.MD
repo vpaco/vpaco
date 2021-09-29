@@ -1,16 +1,15 @@
 # vpaco
 
->页面配置化开发，让前端业务开发人员更聚焦于业务。
+>轻量级业务开发框架，让业务开发更专注于业务本身，通过精简API完成项目搭建
 
-vpaco的核心是页面配置引擎，通过该引擎最终实现前端组件开发和业务开发的分离解藕，让专业的人做专业的事。
+### 快速上手
 
-### 使用
-安装
+`install`
 ```bash
 npm install vpaco --save
 ```
 
-注册
+`register`
 ```javascript
 import Vue from 'vue'
 import vpaco from 'vpaco'
@@ -36,71 +35,29 @@ vpaco.register({
 
 ### 页面
 ```javascript
-export default {
-    layout: [
-        {
-            name: 'alias1',
-            component: 'component1'
-        },
-        {
-            name: 'alias2',
-            component: 'component2'
-        }
-    ],
+export default function({
+    context,
+    render,
+    useState
+}){
 
-    config: function(vm) {
-        const options = {
-            alias1: {},
-            alias2: {}
-        }
+    const component1State = useState({
 
-        const methods = {
+    })
 
-        }
+    const page1State = useState({
 
-        return {
-            options,
-            methods
-        }
-    }
+    })
+
+
+    return(h=>
+        <container>
+            <component name='component1' props={component1State}/>
+            <page name='page1' props={page1State}/>
+        </container>
+    )
 }
 ```
-#### register配置项
-|    Name    | type |   Description   |
-| :--------: | :--------: | :--------: |
-| components    | Object  | 组件(页面layout中使用的组件) |
-| pages    | Object  | 页面 |
-| extensions    | Object  | 页面方法扩展 |
-
-#### 页面内置属性
-|    Name    | type |   Description   |   Parameters   |
-| :--------: | :--------: | :--------: | :--------: |
-| refs    | 属性  | 页面组件实例引用 |-|
-| layoutRefs    | 属性  | layout中布局对象引用 |-|
-| reloadPage    | 方法  | 刷新页面 |-|
-| pushPage  | 方法| 页面替换 | (page, options) |
-| popPage     | 方法| 页面返回，pushPage相反 | - |
-
-#### layout布局对象配置项
-
-|    Name    |   Description   | type |
-| :--------: | :--------: |:--------: |
-| class | 样式类 | String, Object|
-| style    | 样式  | Object |
-| hidden    | 是否隐藏  | Boolean |
-| component        | 组件名称 |String|
-| page  | 页面名称| String|
-
-#### 页面config配置项
-
-|    Name    |   Description   |
-| :--------: | :--------: |
-| options | 组件配置 |
-| methods    | 页面方法  |
-| setup    | 页面初始化钩子  |
-| mounted    | 页面渲染完成钩子  |
-| optionsChange    | 页面入参改变钩子  |
-| destroy    | 页面销毁钩子  |
 
 ## License
 [MIT](http://opensource.org/licenses/MIT)
