@@ -50,7 +50,7 @@ export default {
             type: Object
         },
         config: {
-            type: Object
+            type: Function
         },
         isRemote: {
             type: Boolean
@@ -323,12 +323,19 @@ export default {
 
             if (methods instanceof Promise) {
                 return methods.then(methods => {
-                    this.methods = methods;
-                    return this._renderPage();
+                    return this.registerPageMethodsAndRenderPage(methods);
                 });
             } else {
-                return this._renderPage();
+                return this.registerPageMethodsAndRenderPage(methods);
             }
+        },
+
+        registerPageMethodsAndRenderPage(methods){
+            this.methods = methods;
+            Object.keys(this.methods || {}).forEach((key)=>{
+                this[key] = this.methods[key];
+            });
+            return this._renderPage();
         },
 
         _initLayout(layout) {
@@ -470,6 +477,9 @@ export default {
                             this.$nextTick(() => {
                                 this._page_rendered = true;
                                 this.$parent.$emit('on-rendered');
+                                if(!isUpdate){
+                                    mounted && mounted();
+                                }
                                 resolve();
                             });
                             if (appConfig.debug) {

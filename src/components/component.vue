@@ -25,6 +25,9 @@ export default {
         },
         name: {
             type: String
+        },
+        resourceLoadedHandler: {
+            type: Function
         }
     },
 
@@ -75,6 +78,9 @@ export default {
         this.$nextTick(() => {
             getProxyComponent(this.name, this.isRemote, this.vpId).then(name => {
                 this.innerComponent = name;
+                if(this.resourceLoadedHandler){
+                    this.resourceLoadedHandler();
+                }
                 this.$emit('on-component-ready');
             });
         });
