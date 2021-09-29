@@ -202,6 +202,11 @@ function getResource(name, isRemote, type, id, level){
     let result;
     const  lev = level;
 
+    // 远程组件异步请求返回后，使用组件的地方可能已经销毁了
+    if(!item){
+        return {destroyed: true};
+    }
+
     if(item.type === 'page'){
         const pageInstance = getStackComponentById(id);
         const config = pageInstance.rawPageConfig || {};
@@ -233,7 +238,11 @@ function getResource(name, isRemote, type, id, level){
 
 export function getProxyComponent(name, isRemote, vpId) {
     const Vue = getVue();
-    const {resource, from, scoped, page} = getResource(name, isRemote, 'component', vpId, 0) || {};
+    const {resource, from, scoped, page, destroyed} = getResource(name, isRemote, 'component', vpId, 0) || {};
+
+    if(destroyed){
+        return Promise.resolve();
+    }
 
     if(!resource){
         throw Error(`组件"${name}"不存在！`);
@@ -398,8 +407,12 @@ export function getPageConfig(pageName, vpId, isRemote) {
     let appConfig = getConfig();
     let pageConfig;
 
-    const {resource, from, scoped, page} = getResource(pageName, isRemote, 'page', vpId, 0) || {};
+    const {resource, from, scoped, page, destroyed} = getResource(pageName, isRemote, 'page', vpId, 0) || {};
 
+    if(destroyed){
+        return Promise.resolve();
+    }
+    
     if(!resource){
         throw Error(`页面"${pageName}"不存在！`);
     }
