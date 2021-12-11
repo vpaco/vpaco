@@ -5,7 +5,7 @@
                 <layoutItem v-for="(item, index) in comp" :comp="item" :key="index" :refs="refs"></layoutItem>
             </template>
             <template v-else>
-                <layoutItem :comp="comp" :refs="refs" :key="index"></layoutItem>
+                <layoutItem :comp="comp" :refs="refs" :key="index" :vpId="vpId"></layoutItem>
             </template>
         </template>
     </div>

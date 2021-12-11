@@ -458,7 +458,7 @@ export default {
                                 this.visible = true;
                                 this.pageConfig = pageConfig;
                                 this.innerOptions = options;
-                                this.lastPage = this.page;
+                                this.lastPage = this.page || this.config;
                                 if (appConfig.debug) {
                                     log.debug(`[page start] > pageName: ${this.page};  options: ${toString(logOptions)}`, true);
                                 }
@@ -473,7 +473,7 @@ export default {
                             this.visible = true;
                             this.pageConfig = pageConfig;
                             this.innerOptions = options;
-                            this.lastPage = this.page;
+                            this.lastPage = this.page || this.config;
                             this.$nextTick(() => {
                                 this._page_rendered = true;
                                 this.$parent.$emit('on-rendered');

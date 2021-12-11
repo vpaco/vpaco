@@ -60,6 +60,7 @@ export default {
             type: [Object, Array]
         },
         refs: Object,
+        vpId: Number
     },
     mounted() {
         this.setComponentRefs();
