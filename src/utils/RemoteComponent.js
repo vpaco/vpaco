@@ -37,7 +37,7 @@ export class RemoteComponent {
         //# sourceURL=${this.url}
             (function(){
             document.currentScript.src = '${this.url}';
-                let module = {}, exports = {};
+                let module = {}, exports = {}, require = (key)=>window[key];
                 ${text}
                 window['${name}'] = module;
             })()

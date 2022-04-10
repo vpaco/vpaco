@@ -262,7 +262,7 @@ export function getProxyComponent(name, isRemote, vpId) {
     }
 
     if(typeof resource === 'string'){
-        proxyName = btoa(resource).replace(/\=/g, '') + '_remote_proxy';
+        proxyName = btoa(resource).replace(/\=/g, '').toLowerCase() + '_remote_proxy';
         if(Vue.component(proxyName)){
             return Promise.resolve(proxyName);
         }

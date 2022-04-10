@@ -1,0 +1,95 @@
+let index = 0;
+export class RemoteComponent {
+    fetch(url) {
+        this.url = url;
+        return fetch(url, {
+            mode: 'cors',
+            method: 'GET',
+            headers: {
+                'Access-Control-Allow-Origin': '*'
+            }
+        })
+            .then(function (response) {
+                return response.text();
+            })
+            .then(text => {
+                this.runScript('!!' + text);
+                return this.module // && this.module.exports;
+            });
+    }
+
+    parse(moduleContent){
+        this.runScript('!!' + moduleContent);
+        return this.module // && this.module.exports;
+    }
+
+    removeScript (scriptElement) {
+        document.body.removeChild(scriptElement);
+    }
+
+    runScript(text) {
+        let module = {},
+            name =  `vpFetch${index}`;
+        index++;
+
+        let scriptElement = document.createElement('script');
+
+        scriptElement.innerHTML = `
+        //# sourceURL=${this.url}
+        var windowKeys = Object.keys(window)
+        var lastKey = windowKeys[windowKeys.length - 1];
+
+            (function(){
+            document.currentScript.src = '${this.url}';
+                // let module = {}, exports = {};
+                ${text}
+                var allKeys = Object.keys(window).reverse();
+                var result = {};
+                for(var i = 0; i < allKeys.length; i++){
+                    if(allKeys[i] === lastKey){
+                        break;
+                    }
+                
+                    result[allKeys[i]] = window[allKeys[i]];
+                }
+
+                Object.keys(result).forEach((key)=>{
+                    if(key.indexOf('webpack') === -1){
+                        delete window[key];
+                    }
+                })
+                window['${name}'] = result;
+            })()
+        `;
+
+        // scriptElement.innerHTML = `
+        // //# sourceURL=${this.url}
+        //     var windowKeys = Object.keys(window)
+        //     var lastKey = windowKeys[windowKeys.length - 1];
+
+        //     (function(){
+        //         document.currentScript.src = '${this.url}';
+        //         ${text}
+        //         var allKeys = Object.keys(window).reverse();
+        //         var result = {};
+        //         for(var i = 0; i < allKeys.length; i++){
+        //             if(allKeys[i] === lastKey){
+        //                 break;
+        //             }
+                    
+        //             result[allKeys[i]] = window[allKeys[i]];
+        //         }
+
+        //         Object.keys(result).forEach((key)=>{
+        //             delete window[key];
+        //         })
+
+        //         window['${name}'] = result;
+        //     })()
+        // `;
+        document.body.appendChild(scriptElement);
+        this.removeScript(scriptElement);
+        this.module = window[name];
+        delete window[name];
+    }
+}

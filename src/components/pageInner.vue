@@ -1,9 +1,5 @@
 <template>
-    <keep-alive
-        include="aHR0cDovL3ltbS1jZG4ub3NzLWNuLXNoYW5naGFpLmFsaXl1bmNzLmNvbS9mZS1jb21wb25lbnRzL2ZyYW1lLWhlYWRlci8xLjAuMi9pbmRleC5qcw_remote_proxy"
-    >
-        <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId" />
-    </keep-alive>
+    <Container :config="pageConfig" :refs="refs" v-if="pageConfig && visible" :class="getPageClass" :vpId="vpId" />
 </template>
 <script>
 import {
@@ -30,15 +26,15 @@ import isArray from 'isarray';
  * 页面中状态分2种：
  * 1、外部传入 props
  * 2、内部组件及页面的state
- * 
+ *
  * 当1改变时的处理，有2种处理方式可供选择：
  * 1、自动模式：
  *  自动模式时，当检测到页面出入的props改变时，自动再次执行页面配置函数，此时页面内部组件的state将会重新生成。页面内部组件不会销毁，但是状态会置为最新的。
  * 2、手动模式
  *  手动模式时，通过optionsChange接口props的改变，在optionsChange的处理函数中手动对props的改变对页面内部状态做更新。
- * 
+ *
  * 内部组件及页面的state改变时, 会重新执行render函数，不会重新执行页面配置函数；执行render函数组件不会销毁重建，只是更新状态。
- * 
+ *
  */
 export default {
     components: { Container },
@@ -60,7 +56,7 @@ export default {
         }
     },
 
-    data: function () {
+    data: function() {
         return {
             vpIsPage: true,
             pageConfig: null,
@@ -76,11 +72,11 @@ export default {
     },
 
     watch: {
-        page: function () {
+        page: function() {
             this.reloadPage();
         },
 
-        config: function () {
+        config: function() {
             this.reloadPage();
         },
 
@@ -178,8 +174,8 @@ export default {
             }
         },
 
-        reReloadPage: debounce(function () {
-            if(!this.pageConfig){
+        reReloadPage: debounce(function() {
+            if (!this.pageConfig) {
                 return;
             }
             this._renderPage(true);
@@ -221,7 +217,7 @@ export default {
                                 this.renderPage(this.rawPageConfig).then(() => {
                                     resolve();
                                 });
-                            } else if (this.layoutRefs[ref]) {
+                            } else if (this.layoutRefs[ref] && this.layoutRefs[ref].visible !== false) {
                                 this.layoutRefs[ref].visible = false;
                                 this.$nextTick(() => {
                                     this.layoutRefs[ref].visible = true;
@@ -256,13 +252,13 @@ export default {
                         // freezeState  = deepFreeze(state);
                         self.$set(self.state, index, state);
                         // $set后如果直接$watch首次也会触发$watch的处理函数，需要加一个nexttick
-                        self.$nextTick(()=>{
+                        self.$nextTick(() => {
                             self.$watch(
                                 () => {
                                     return self.state[index];
                                 },
                                 () => {
-                                    if(self.state[index] === undefined){
+                                    if (self.state[index] === undefined) {
                                         return;
                                     }
                                     self.reReloadPage();
@@ -300,16 +296,16 @@ export default {
                         });
                     }
                 },
-                setup: (callback) => {
+                setup: callback => {
                     this.setup = callback;
                 },
                 optionsChange: callback => {
                     this.optionsChange = callback;
                 },
-                mounted: (callback) => {
+                mounted: callback => {
                     this.mounted = callback;
                 },
-                destroy: (callback) => {
+                destroy: callback => {
                     this.destroy = callback;
                 }
             };
@@ -330,9 +326,9 @@ export default {
             }
         },
 
-        registerPageMethodsAndRenderPage(methods){
+        registerPageMethodsAndRenderPage(methods) {
             this.methods = methods;
-            Object.keys(this.methods || {}).forEach((key)=>{
+            Object.keys(this.methods || {}).forEach(key => {
                 this[key] = this.methods[key];
             });
             return this._renderPage();
@@ -369,57 +365,51 @@ export default {
         _updatePageConfig(newList, originList) {
             newList.forEach((it, index) => {
                 if (it.component) {
-                    const originIndex = originList.findIndex(it1=>it1 && 
-                    it1.component === it.component &&
-                    it1.key === it.key &&
-                    it1.ref === it.ref &&
-                    it1.props === it.props 
+                    const originIndex = originList.findIndex(
+                        it1 => it1 && it1.component === it.component && it1.key === it.key && it1.ref === it.ref && it1.props === it.props
                     );
                     if (originIndex >= 0) {
-                        if(originIndex >  index ){
-                            originList.splice(index, originIndex -  index);
+                        if (originIndex > index) {
+                            originList.splice(index, originIndex - index);
                         }
                         originList[index].props = it.props;
                         originList[index].visible = it.visible;
-                    }else{
+                    } else {
                         originList.splice(index, 0, it);
                     }
-                    if(it.ref){
+                    if (it.ref) {
                         this.layoutRefs[it.ref] = originList[index];
                     }
-                }else if (it.page) {
-                    const originIndex = originList.findIndex(it1=>it1 && 
-                    it1.page === it.page &&
-                    it1.key === it.key &&
-                    it1.ref === it.ref &&
-                    it1.props === it.props 
+                } else if (it.page) {
+                    const originIndex = originList.findIndex(
+                        it1 => it1 && it1.page === it.page && it1.key === it.key && it1.ref === it.ref && it1.props === it.props
                     );
                     if (originIndex >= 0) {
-                        if(originIndex >  index ){
-                            originList.splice(index, originIndex -  index);
+                        if (originIndex > index) {
+                            originList.splice(index, originIndex - index);
                         }
                         originList[index].props = it.props;
                         originList[index].visible = it.visible;
-                    }else{
+                    } else {
                         originList.splice(index, 0, it);
                     }
-                    if(it.ref){
+                    if (it.ref) {
                         this.layoutRefs[it.ref] = originList[index];
                     }
-                }else if (it.list) {
-                    if(originList[index].list){
+                } else if (it.list) {
+                    if (originList[index].list) {
                         originList[index].visible = it.visible;
-                        this._updatePageConfig(it.list, originList[index].list);  
-                    }else{
+                        this._updatePageConfig(it.list, originList[index].list);
+                    } else {
                         originList.splice(index, 0, it);
                     }
-                }else if(Array.isArray(it)){
-                    if(Array.isArray(originList[index])) {
+                } else if (Array.isArray(it)) {
+                    if (Array.isArray(originList[index])) {
                         this._updatePageConfig(it, originList[index]);
-                    }else{
+                    } else {
                         originList.splice(index, 1, it);
                     }
-                }else{
+                } else {
                     originList.splice(index, 1, it);
                 }
             });
@@ -434,7 +424,7 @@ export default {
 
             this.destroy = destroy;
             layout = this._initLayout(layout);
-            
+
             let pageConfig = layout; // this.merge(layout, config);
             // 加载组件
             return new Promise((resolve, reject) => {
@@ -477,7 +467,7 @@ export default {
                             this.$nextTick(() => {
                                 this._page_rendered = true;
                                 this.$parent.$emit('on-rendered');
-                                if(!isUpdate){
+                                if (!isUpdate) {
                                     mounted && mounted();
                                 }
                                 resolve();
