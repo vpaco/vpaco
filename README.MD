@@ -38,6 +38,7 @@ vpaco.register({
 export default function({
     context,
     render,
+    optionsChange,
     useState
 }){
 
@@ -47,6 +48,10 @@ export default function({
 
     const page1State = useState({
 
+    })
+    
+    optionsChange(()=>{
+    
     })
 
 
