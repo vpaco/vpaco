@@ -138,7 +138,7 @@ export default {
             pid: this.parentId,
             type: 'page',
             instance: this,
-            name: this.page
+            name: this.page || `no_page_name${this.vpId}`
         });
 
         this.reloadPage();
@@ -485,7 +485,8 @@ export default {
                         appConfig.beforePageEnter(
                             {
                                 pageName: this.page,
-                                options: options
+                                stataList: this.componentStateList || [],
+                                config: this.config
                             },
                             () => {
                                 showPage();
@@ -507,9 +508,13 @@ export default {
         },
 
         _initLayoutRefs(list) {
+            this.componentStateList = [];
             recursive(list, 'list', item => {
                 if (item.ref) {
                     this.layoutRefs[item.ref] = item;
+                }
+                if(item.props){
+                    this.componentStateList.push(item.props);
                 }
             });
         },

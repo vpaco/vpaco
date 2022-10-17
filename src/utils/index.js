@@ -1,42 +1,40 @@
-import {getConfig, getVue} from '../config';
+import { getConfig, getVue } from '../config';
 import proxy from './proxy';
-import {RemoteComponent} from './RemoteComponent';
+import { RemoteComponent } from './RemoteComponent';
 
 let uid = 1000;
 
 let loadedModules = {};
-let renderStack = [
+let renderStack = [];
 
-];
-
-function getStackItemById(id){
+function getStackItemById(id) {
     return renderStack.find(it => it.id === id);
 }
 
-function getStackComponentById(id){
-    const item  = renderStack.find(it => it.id === id);
+function getStackComponentById(id) {
+    const item = renderStack.find(it => it.id === id);
     let instance = item.instance;
 
-    if(instance  && instance.vpIsComponent){
+    if (instance && instance.vpIsComponent) {
         instance = instance.$refs.component;
     }
-    if(instance && instance.vpComponentWrapper){
+    if (instance && instance.vpComponentWrapper) {
         instance = instance.$children[0];
     }
     return instance;
 }
 
-export function getUid(){
+export function getUid() {
     uid = uid + 1;
     return uid;
 }
 
-export function addRenderStack(one){
+export function addRenderStack(one) {
     renderStack.push(one);
 }
 
-export function removeRenderStackItem(id){
-    const index = renderStack.findIndex(it=>it.id === id);
+export function removeRenderStackItem(id) {
+    const index = renderStack.findIndex(it => it.id === id);
     renderStack.splice(index, 1);
 }
 
@@ -86,7 +84,7 @@ export function deepCopy(obj) {
                 o.push(dp(data[i]));
             }
         } else if (t === 'object') {
-            Object.keys(data).forEach((i)=>{
+            Object.keys(data).forEach(i => {
                 o[i] = dp(data[i]);
             });
         }
@@ -104,7 +102,7 @@ export function getRefs(config) {
 }
 
 function getNames_(list, refs) {
-    list.forEach((component)=>{
+    list.forEach(component => {
         if (component.list) {
             getNames_(component.list, refs);
         } else {
@@ -124,7 +122,7 @@ function getNames_(list, refs) {
 
 function checkLayoutNameRepeat(names, name) {
     let hasOne = false;
-    names.forEach(function (item) {
+    names.forEach(function(item) {
         if (item === name) {
             hasOne = true;
         }
@@ -134,7 +132,7 @@ function checkLayoutNameRepeat(names, name) {
 }
 
 export function loadComponent(layout, pageConfig, pageName, vpId) {
-    return getRemoteComponents().then(()=>{
+    return getRemoteComponents().then(() => {
         return loadComponent_(layout.list, pageConfig, pageName, vpId);
     });
 }
@@ -142,16 +140,18 @@ export function loadComponent(layout, pageConfig, pageName, vpId) {
 function loadComponent_(list, pageConfig, pageName, vpId) {
     const appConfig = getConfig();
     let defs = [];
-    list.forEach((component)=>{
+    list.forEach(component => {
         if (component.list) {
             defs.push(loadComponent_(component.list, pageConfig, pageName, vpId));
-        } else if(Array.isArray(component)){
+        } else if (Array.isArray(component)) {
             defs.push(loadComponent_(component, pageConfig, pageName, vpId));
-        }else if (component.component || component.remoteComponent) {
+        } else if (component.component || component.remoteComponent) {
             component.componentName = component.component || component.remoteComponent;
-            defs.push(getProxyComponent(component.componentName, component.isRemote, vpId).then(proxyName => {
-                component.component = proxyName;
-            }));
+            defs.push(
+                getProxyComponent(component.componentName, component.isRemote, vpId, component.type).then(proxyName => {
+                    component.component = proxyName;
+                })
+            );
         }
     });
 
@@ -170,89 +170,94 @@ function getRemoteComponentUrl(name) {
     return appConfig.remoteComponents[name];
 }
 
-function getRemoteComponents(){
+function getRemoteComponents() {
     const appConfig = getConfig();
 
-    return new Promise((resolve, reject)=>{
-        if(appConfig.remoteUrlLoading){
-            setInterval(()=>{
-                if(!appConfig.remoteUrlLoading){
+    return new Promise((resolve, reject) => {
+        if (appConfig.remoteUrlLoading) {
+            setInterval(() => {
+                if (!appConfig.remoteUrlLoading) {
                     resolve(appConfig.remoteComponents);
                 }
             }, 30);
-        }else{
+        } else {
             resolve(appConfig.remoteComponents);
         }
     });
-
 }
 
-function getResource(name, isRemote, type, id, level){
+function getResource(name, isRemote, type, id, level) {
     const appConfig = getConfig();
-    if(!id || id === 0){
+    if (!id || id === 0) {
         return;
     }
     const typeMap = {
-        page: ['pages','remotePages'],
+        page: ['pages', 'remotePages'],
         component: ['components', 'remoteComponents']
     };
 
-    const remote = typeMap[type][1], local = typeMap[type][0];
+    const remote = typeMap[type][1],
+        local = typeMap[type][0];
     const item = getStackItemById(id);
     let result;
-    const  lev = level;
+    const lev = level;
 
     // 远程组件异步请求返回后，使用组件的地方可能已经销毁了
-    if(!item){
-        return {destroyed: true};
+    if (!item) {
+        return { destroyed: true };
     }
 
-    if(item.type === 'page'){
+    if (item.type === 'page') {
         const pageInstance = getStackComponentById(id);
         const config = pageInstance.rawPageConfig || {};
-        if(isRemote && config[remote] &&  config[remote][name]){
-            result = {resource: config[remote][name], from: 'remote', scoped: true, page: item.name};
-        }else if(!isRemote && config[local] &&  config[local][name]){
-            result = {resource: config[local][name], from: 'local', scoped: true, page: item.name};
-        }else if(!isRemote && config[remote] &&  config[remote][name]){
-            result = {resource: config[remote][name], from: 'remote', scoped: true, page: item.name};
-        }else {
-            result = getResource(name, isRemote, type,  item.pid, ++level);
+        if (isRemote && config[remote] && config[remote][name]) {
+            result = { resource: config[remote][name], from: 'remote', scoped: true, page: item.name };
+        } else if (!isRemote && config[local] && config[local][name]) {
+            result = { resource: config[local][name], from: 'local', scoped: true, page: item.name };
+        } else if (!isRemote && config[remote] && config[remote][name]) {
+            result = { resource: config[remote][name], from: 'remote', scoped: true, page: item.name };
+        } else {
+            result = getResource(name, isRemote, type, item.pid, ++level);
         }
-    }else {
-        result = getResource(name, isRemote, type,  item.pid, ++level);
+    } else {
+        result = getResource(name, isRemote, type, item.pid, ++level);
     }
 
-    if(lev === 0 && !result){
-        if(isRemote && appConfig[remote] && appConfig[remote][name]){
-            result = {resource: appConfig[remote][name], from: 'remote', scoped: false};
-        }else if(!isRemote && appConfig[local] && appConfig[local][name]){
-            result = {resource: appConfig[local][name], from: 'local', scoped: false};
-        }else if(!isRemote && appConfig[remote] && appConfig[remote][name]){
-            result = {resource: appConfig[remote][name], from: 'remote', scoped: false};
+    if (lev === 0 && !result) {
+        if (isRemote && appConfig[remote] && appConfig[remote][name]) {
+            result = { resource: appConfig[remote][name], from: 'remote', scoped: false };
+        } else if (!isRemote && appConfig[local] && appConfig[local][name]) {
+            result = { resource: appConfig[local][name], from: 'local', scoped: false };
+        } else if (!isRemote && appConfig[remote] && appConfig[remote][name]) {
+            result = { resource: appConfig[remote][name], from: 'remote', scoped: false };
         }
     }
 
-    return  result;
+    return result;
 }
 
-export function getProxyComponent(name, isRemote, vpId) {
+export function getProxyComponent(name, isRemote, vpId, type) {
+    let proxyName;
     const Vue = getVue();
-    const {resource, from, scoped, page, destroyed} = getResource(name, isRemote, 'component', vpId, 0) || {};
+    if (typeOf(name) === 'object') {
+        proxyName = `no_name_component_${uid++}`;
+        Vue.component(proxyName, proxy(name));
+        return Promise.resolve(proxyName);
+    }
+    const { resource, from, scoped, page, destroyed } = getResource(name, isRemote, 'component', vpId, 0) || {};
 
-    if(destroyed){
+    if (destroyed) {
         return Promise.resolve();
     }
 
-    if(!resource){
+    if (!resource) {
         throw Error(`组件"${name}"不存在！`);
     }
-    let proxyName;
 
-    if(typeof resource === 'object'){
-        if(scoped && page){
+    if (typeof resource === 'object') {
+        if (scoped && page) {
             proxyName = page + name + '_proxy';
-        }else {
+        } else {
             proxyName = name + '_proxy';
         }
         if (!Vue.component(proxyName)) {
@@ -261,13 +266,21 @@ export function getProxyComponent(name, isRemote, vpId) {
         return Promise.resolve(proxyName);
     }
 
-    if(typeof resource === 'string'){
-        proxyName = btoa(resource).replace(/\=/g, '').toLowerCase() + '_remote_proxy';
-        if(Vue.component(proxyName)){
+    if (typeof resource === 'string') {
+        proxyName =
+            btoa(resource)
+                .replace(/\=/g, '')
+                .toLowerCase() + '_remote_proxy' +  (type || '');
+        if (Vue.component(proxyName)) {
             return Promise.resolve(proxyName);
         }
-        return loadRemoteModule(resource).then((component)=>{
-            Vue.component(proxyName, proxy(component,name));
+        const arr = resource.split('/');
+        if (type) {
+            arr[arr.length - 1] = `${type}View.js`;
+        }
+
+        return loadRemoteModule(arr.join('/')).then(component => {
+            Vue.component(proxyName, proxy(component, name));
             return proxyName;
         });
     }
@@ -291,7 +304,7 @@ function formatDate(date) {
 }
 
 export const log = {
-    debug: function (msg, sys) {
+    debug: function(msg, sys) {
         let appConfig = getConfig();
 
         if (appConfig.debug) {
@@ -302,10 +315,10 @@ export const log = {
                 if (this.vpIsPage) {
                     // eslint-disable-next-line no-console
                     console &&
-                    // eslint-disable-next-line no-console
-                    console.debug &&
-                    // eslint-disable-next-line no-console
-                    console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] [pageName: ${this.page}] ${formatDate(new Date())}  ${msg}`);
+                        // eslint-disable-next-line no-console
+                        console.debug &&
+                        // eslint-disable-next-line no-console
+                        console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] [pageName: ${this.page}] ${formatDate(new Date())}  ${msg}`);
                 } else {
                     // eslint-disable-next-line no-console
                     console && console.debug && console.debug(`[${sys ? 'SYS LOG' : 'DEV LOG'}] ${formatDate(new Date())}  ${msg}`);
@@ -315,10 +328,10 @@ export const log = {
     }
 };
 
-export function recursive(list, childrenAttr, callback){
-    list.forEach((it)=>{
+export function recursive(list, childrenAttr, callback) {
+    list.forEach(it => {
         callback(it);
-        if(it[childrenAttr]){
+        if (it[childrenAttr]) {
             recursive(it[childrenAttr], childrenAttr, callback);
         }
     });
@@ -331,7 +344,7 @@ export function toString(b) {
     let cache = [];
     return JSON.stringify(
         b,
-        function (key, value) {
+        function(key, value) {
             if (typeof value === 'object' && value !== null) {
                 if (cache.indexOf(value) !== -1) {
                     // Circular reference found, discard key
@@ -346,19 +359,19 @@ export function toString(b) {
     );
 }
 
-export function getComponent (name, isRemote = true) {
+export function getComponent(name, isRemote = true) {
     let appConfig = getConfig();
 
-    return getRemoteComponents().then((remoteComponents)=>{
-        if(isRemote){
+    return getRemoteComponents().then(remoteComponents => {
+        if (isRemote) {
             const url = remoteComponents[name];
-            if(!url){
+            if (!url) {
                 throw new Error('远程组件' + name + '不存在');
             }
             return loadRemoteModule(url);
-        }else{
+        } else {
             const comp = appConfig.components[name];
-            if(!comp){
+            if (!comp) {
                 throw new Error('本地组件' + name + '不存在');
             }
             return Promise.resolve(appConfig.components[name]);
@@ -382,7 +395,7 @@ export function loadRemoteModule(url, name = 'default') {
     return loadedModules[url];
 }
 
-export function parseModule(content){
+export function parseModule(content) {
     let rc = new RemoteComponent();
     return rc.parse(content);
 }
@@ -407,54 +420,53 @@ export function getPageConfig(pageName, vpId, isRemote) {
     let appConfig = getConfig();
     let pageConfig;
 
-    const {resource, from, scoped, page, destroyed} = getResource(pageName, isRemote, 'page', vpId, 0) || {};
+    const { resource, from, scoped, page, destroyed } = getResource(pageName, isRemote, 'page', vpId, 0) || {};
 
-    if(destroyed){
+    if (destroyed) {
         return Promise.resolve();
     }
-    
-    if(!resource){
+
+    if (!resource) {
         throw Error(`页面"${pageName}"不存在！`);
     }
 
-    if(typeof resource === 'object' || typeof resource === 'function'){
+    if (typeof resource === 'object' || typeof resource === 'function') {
         return Promise.resolve(resource);
     }
 
-    if(typeof resource === 'string'){
+    if (typeof resource === 'string') {
         return loadRemoteModule(resource);
     }
 }
 
-export function createLayout(ele, config, children){
-    if(ele === 'container'){
+export function createLayout(ele, config, children) {
+    if (ele === 'container') {
         let conf = children === undefined ? {} : config || {};
-        conf = {...conf.attrs || {}, ...conf};
-        const {visible = true, render, ...others} = conf;
+        conf = { ...(conf.attrs || {}), ...conf };
+        const { visible = true, render, ...others } = conf;
         return {
             ...others,
             visible,
             list: children || config
         };
-    }else if (ele === 'component'){
-        config = {...config.attrs || {}, ...config};
-        const {visible = true, ref, name, ...others} = config;
-        return {...others || {}, visible, ref, component: name};
-    } else if (ele === 'page'){
-        config = {...config.attrs || {}, ...config};
-        const {visible = true, ref, name, ...others} = config;
-        return {...others || {}, visible, ref, page: name};
-    }
-    else if (ele === 'custom'){
-        config = {...config.attrs || {}, ...config};
-        const {visible = true, render, ...others} = config;
-        return {...others || {}, visible, render};
+    } else if (ele === 'component') {
+        config = { ...(config.attrs || {}), ...config };
+        const { visible = true, ref, name, ...others } = config;
+        return { ...(others || {}), visible, ref, component: name };
+    } else if (ele === 'page') {
+        config = { ...(config.attrs || {}), ...config };
+        const { visible = true, ref, name, ...others } = config;
+        return { ...(others || {}), visible, ref, page: name };
+    } else if (ele === 'custom') {
+        config = { ...(config.attrs || {}), ...config };
+        const { visible = true, render, ...others } = config;
+        return { ...(others || {}), visible, render };
     }
 }
 
 export function deepFreeze(obj) {
     let propNames = Object.getOwnPropertyNames(obj);
-    let result = Array.isArray(obj) ? [...obj] : {...obj};
+    let result = Array.isArray(obj) ? [...obj] : { ...obj };
     propNames.forEach(function(name) {
         let prop = result[name];
         if (typeof prop === 'object' && prop !== null) {
@@ -466,21 +478,23 @@ export function deepFreeze(obj) {
 
 export function debounce(fn, wait, immediate) {
     let timer;
-    return function () {
-        if (timer) clearTimeout(timer);
+    return function() {
+        if (timer) {
+            clearTimeout(timer);
+        }
         if (immediate) {
             // 如果已经执行过，不再执行
-            var callNow = !timer;
+            let callNow = !timer;
             timer = setTimeout(() => {
                 timer = null;
-            }, wait)
+            }, wait);
             if (callNow) {
-                fn.apply(this, arguments)
+                fn.apply(this, arguments);
             }
         } else {
             timer = setTimeout(() => {
-                fn.apply(this, arguments)
+                fn.apply(this, arguments);
             }, wait);
         }
-    }
+    };
 }

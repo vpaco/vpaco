@@ -26,6 +26,9 @@ export default {
         name: {
             type: String
         },
+        type: { // config | design 
+            type: String
+        },
         resourceLoadedHandler: {
             type: Function
         }
@@ -44,7 +47,7 @@ export default {
     watch: {
         name() {
             this.isRemote = isRemoteComponent(this.name);
-            getProxyComponent(this.name, this.isRemote, this.vpId).then(name => {
+            getProxyComponent(this.name, this.isRemote, this.vpId, this.type).then(name => {
                 this.innerComponent = name;
             });
         }
@@ -76,7 +79,7 @@ export default {
         });
         this.isRemote = isRemoteComponent(this.name);
         this.$nextTick(() => {
-            getProxyComponent(this.name, this.isRemote, this.vpId).then(name => {
+            getProxyComponent(this.name, this.isRemote, this.vpId, this.type).then(name => {
                 this.innerComponent = name;
                 if(this.resourceLoadedHandler){
                     this.resourceLoadedHandler();
