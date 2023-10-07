@@ -359,16 +359,23 @@ export function toString(b) {
     );
 }
 
-export function getComponent(name, isRemote = true) {
+export function getComponent(name, isRemote = true, otherFile, exportName) {
     let appConfig = getConfig();
 
     return getRemoteComponents().then(remoteComponents => {
         if (isRemote) {
-            const url = remoteComponents[name];
+            let url = remoteComponents[name];
             if (!url) {
                 throw new Error('远程组件' + name + '不存在');
             }
-            return loadRemoteModule(url);
+
+            if(otherFile){
+                const arr = url.split('/');
+                arr[arr.length - 1] = `${otherFile}.js`;
+                url = arr.join('/');
+            }
+
+            return loadRemoteModule(url, exportName);
         } else {
             const comp = appConfig.components[name];
             if (!comp) {
