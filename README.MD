@@ -67,4 +67,4 @@ export default function({
 ## License
 [MIT](http://opensource.org/licenses/MIT)
 
-Copyright (c) 2019-present, LIUJUN
+Copyright (c) 2023-present, LIUJUN
