@@ -51,6 +51,9 @@ export function register(config) {
     if (globalConfig.remoteResourceUrl) {
         globalConfig.remoteUrlLoading = true;
         return loadRemoteModule(globalConfig.remoteResourceUrl).then((res)=>{
+            if(config.remoteResourceUrlLoadingSuccess){
+                config.remoteResourceUrlLoadingSuccess(res);
+            }
             globalConfig.remoteComponents = res.components;
             globalConfig.remotePages = res.pages;
             globalConfig.remoteUrlLoading = false;
